@@ -21,7 +21,6 @@
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
 
-    /* NAVBAR */
     .navbar { background: #10121a; border-bottom: 1px solid var(--border); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
     .brand { font-size: 1.1rem; font-weight: bold; color: #fff; }
     .brand span { color: var(--primary); font-size: 0.78rem; display: block; font-weight: normal; margin-top: 2px; }
@@ -33,24 +32,28 @@
 
     .container { padding: 25px; max-width: 1400px; margin: 0 auto; width: 100%; flex: 1; }
 
-    /* LOGIN GESTOR */
     .login-wrapper { display: flex; justify-content: center; align-items: center; min-height: 70vh; }
     .login-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; width: 100%; max-width: 400px; text-align: center; }
     
     .input-group { text-align: left; margin-bottom: 15px; }
     .input-group label { display: block; font-size: 0.78rem; color: var(--primary); font-weight: bold; margin-bottom: 5px; }
-    .input-box { width: 100%; background: #0a0b0e; border: 1px solid var(--border); color: #fff; padding: 11px; border-radius: 8px; font-size: 0.88rem; outline: none; }
+    .input-box { width: 100%; background: #0a0b0e; border: 1px solid var(--border); color: #fff; padding: 11px; border-radius: 8px; font-size: 0.88rem; outline: none; color-scheme: dark; }
     .input-box:focus { border-color: var(--primary); }
+
+    /* CORREÇÃO DO ÍCONE DO CALENDÁRIO */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      cursor: pointer;
+      opacity: 0.9;
+    }
 
     .btn-primary { width: 100%; background: var(--primary); color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; }
     .btn-primary:hover { opacity: 0.9; }
 
-    /* TABS */
     .gestor-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; flex-wrap: wrap; }
     .tab-btn { background: none; border: 1px solid transparent; color: var(--text-muted); padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; cursor: pointer; }
     .tab-btn.active { background: rgba(0, 229, 255, 0.1); border-color: var(--primary); color: var(--primary); }
 
-    /* TABELAS E CARDS */
     .table-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 25px; }
     .table-title { font-size: 1rem; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
     
@@ -59,7 +62,14 @@
     td { padding: 12px; border-bottom: 1px solid var(--border); }
     tr:hover { background: rgba(255, 255, 255, 0.02); }
 
-    /* FINANCEIRO ESTILO COMPLETO */
+    .btn-whats-app {
+      background: #25D366; color: #000; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+    }
+
+    .pro-highlight {
+      color: var(--primary); font-weight: bold; background: rgba(0, 229, 255, 0.12); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--primary); display: inline-block;
+    }
+
     .filter-bar { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
     .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
@@ -70,9 +80,12 @@
     .chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; height: 320px; }
     .chart-header { font-size: 0.88rem; font-weight: bold; margin-bottom: 12px; color: #fff; display: flex; align-items: center; gap: 8px; }
 
-    /* SEÇÃO CONFIGURAÇÕES COMPLETA */
     .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
-    
+
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.8rem; color: var(--text-main); }
+    .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
+
+    /* MODAIS COM FECHAMENTO AO CLICAR FORA */
     .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); display:none; justify-content:center; align-items:center; z-index:99; }
     .modal-content { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px; width: 100%; max-width: 360px; text-align: center; }
   </style>
@@ -110,10 +123,6 @@
         </div>
 
         <button class="btn-primary" onclick="doEmpresarioLogin()">Entrar no Painel</button>
-        
-        <p style="margin-top:15px; font-size:0.75rem; color:var(--text-muted);">
-          Demos de teste: <strong>noel@barbearia.com</strong> / <strong>divas@salao.com</strong> / <strong>plena@studio.com</strong>
-        </p>
       </div>
     </div>
 
@@ -127,11 +136,11 @@
         <button class="tab-btn" id="btnTabConfig" onclick="switchGestorTab('config')">⚙️ Configurações & Serviços</button>
       </div>
 
-      <!-- TAB 1: AGENDAMENTOS -->
+      <!-- TAB 1: AGENDAMENTOS (AUTO-REFRESH A CADA 2 MINUTOS) -->
       <div id="secAgendamentos">
         <div class="table-card">
           <div class="table-title">
-            <span>Próximos Horários Agendados</span>
+            <span>Próximos Horários Agendados <small style="font-weight:normal; color:var(--text-muted); font-size:0.75rem;">(Atualização automática a cada 2 min)</small></span>
             <button class="btn-header" onclick="loadRealtimeAgendamentos()">🔄 Atualizar Lista</button>
           </div>
           <table>
@@ -139,6 +148,7 @@
               <tr>
                 <th>Horário</th>
                 <th>Cliente</th>
+                <th>Contato WhatsApp</th>
                 <th>Serviços</th>
                 <th>Duração</th>
                 <th>Profissional</th>
@@ -147,13 +157,13 @@
               </tr>
             </thead>
             <tbody id="tblAgendamentosBody">
-              <tr><td colspan="7" style="text-align:center;">Carregando registros...</td></tr>
+              <tr><td colspan="8" style="text-align:center;">Carregando registros...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- TAB 2: FATURAMENTO COMPLETO COM OS 3 GRÁFICOS -->
+      <!-- TAB 2: FATURAMENTO E CLIENTES (PDF EXPORT) -->
       <div id="secFaturamento" style="display: none;">
         
         <div class="filter-bar">
@@ -162,7 +172,10 @@
             <input type="date" value="2026-10-01" class="input-box" style="width:auto; margin-bottom:0;">
             <button class="btn-primary" style="width:auto; padding:8px 16px;">Aplicar Filtro</button>
           </div>
-          <button class="btn-header" style="background:#ff3b30; border-color:#ff3b30; color:#fff;" onclick="alert('Gerando Relatório Financeiro em PDF...')">📄 Baixar Relatório Financeiro (PDF)</button>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-header" style="background:#25D366; border-color:#25D366; color:#000;" onclick="exportClientListPDF()">📋 Baixar Lista de Clientes em PDF</button>
+            <button class="btn-header" style="background:#ff3b30; border-color:#ff3b30; color:#fff;" onclick="alert('Gerando Relatório Financeiro em PDF...')">📄 Baixar Relatório Financeiro (PDF)</button>
+          </div>
         </div>
 
         <div class="kpi-grid">
@@ -189,11 +202,11 @@
 
       </div>
 
-      <!-- TAB 3: RESTAURAÇÃO DE TODAS AS CONFIGURAÇÕES DA EMPRESA -->
+      <!-- TAB 3: CONFIGURAÇÕES COMPLETA -->
       <div id="secConfig" style="display: none;">
         <div class="config-grid">
           
-          <!-- FORMULARIO 1: DADOS DA EMPRESA E TEMA -->
+          <!-- FORMULARIO 1: DADOS E TEMA REAL -->
           <div class="table-card">
             <div class="table-title">🏢 Dados da Empresa & Identidade</div>
             <div class="input-group">
@@ -220,7 +233,7 @@
             <button class="btn-primary" onclick="salvarDadosEmpresa()">Salvar Identidade Visual</button>
           </div>
 
-          <!-- FORMULARIO 2: REDES SOCIAIS E CONTATO -->
+          <!-- FORMULARIO 2: REDES SOCIAIS -->
           <div class="table-card">
             <div class="table-title">📱 Redes Sociais & Canais de Contato</div>
             <div class="input-group">
@@ -235,16 +248,12 @@
               <label>Link do Facebook:</label>
               <input type="text" id="cfgFace" class="input-box" value="https://facebook.com/barbeariavip">
             </div>
-            <div class="input-group">
-              <label>Link do TikTok:</label>
-              <input type="text" id="cfgTikTok" class="input-box" value="https://tiktok.com/@barbeariavip">
-            </div>
             <button class="btn-primary" onclick="salvarRedesSociais()">Salvar Redes Sociais</button>
           </div>
 
-          <!-- FORMULARIO 3: FUNCIONÁRIOS E HORÁRIO DE FUNCIONAMENTO -->
+          <!-- FORMULARIO 3: CADASTRO DE FUNCIONÁRIO COM PERMISSÕES DE ACESSO -->
           <div class="table-card">
-            <div class="table-title">👥 Equipe & Horário de Funcionamento</div>
+            <div class="table-title">👥 Equipe & Permissões de Acesso</div>
             <div class="input-group">
               <label>Nome do Funcionário/Atendente:</label>
               <input type="text" id="cfgFuncNome" class="input-box" placeholder="Ex: Lucas Silva">
@@ -253,18 +262,43 @@
               <label>Especialidade / Cargo:</label>
               <input type="text" id="cfgFuncCargo" class="input-box" placeholder="Ex: Barbeiro Especialista">
             </div>
-            <button class="btn-primary" onclick="cadastrarFuncionario()" style="margin-bottom:15px;">+ Cadastrar Atendente</button>
 
-            <hr style="border-color:var(--border); margin:15px 0;">
-
-            <div class="input-group">
-              <label>Horário de Abertura / Fechamento:</label>
-              <input type="text" id="cfgHorariosAtend" class="input-box" value="08:00 às 19:00 (Segunda a Sábado)">
+            <label class="input-label" style="margin-top:10px;">Permissões do Funcionário no App:</label>
+            <div class="checkbox-row">
+              <input type="checkbox" id="permAgend" checked> <label for="permAgend">Visualizar e Gerenciar Agendamentos</label>
             </div>
-            <button class="btn-primary" onclick="salvarHorarios()">Salvar Horários de Funcionamento</button>
+            <div class="checkbox-row">
+              <input type="checkbox" id="permConfig"> <label for="permConfig">Alterar Configurações e Dados da Empresa</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="permFinanceiro"> <label for="permFinanceiro">Acessar Relatórios e Faturamento</label>
+            </div>
+
+            <button class="btn-primary" onclick="cadastrarFuncionario()" style="margin-top:10px;">+ Cadastrar Atendente com Permissões</button>
           </div>
 
-          <!-- FORMULARIO 4: SERVIÇOS E PREÇOS -->
+          <!-- FORMULARIO 4: HORÁRIO DE FUNCIONAMENTO POR DIA -->
+          <div class="table-card">
+            <div class="table-title">⏰ Dias e Horários de Funcionamento</div>
+            
+            <label class="input-label">Selecione os Dias de Atendimento:</label>
+            <div class="checkbox-row"><input type="checkbox" class="chkDay" value="Segunda" checked> <span>Segunda-feira</span></div>
+            <div class="checkbox-row"><input type="checkbox" class="chkDay" value="Terça" checked> <span>Terça-feira</span></div>
+            <div class="checkbox-row"><input type="checkbox" class="chkDay" value="Quarta" checked> <span>Quarta-feira</span></div>
+            <div class="checkbox-row"><input type="checkbox" class="chkDay" value="Quinta" checked> <span>Quinta-feira</span></div>
+            <div class="checkbox-row"><input type="checkbox" class="chkDay" value="Sexta" checked> <span>Sexta-feira</span></div>
+            <div class="checkbox-row"><input type="checkbox" class="chkDay" value="Sábado" checked> <span>Sábado</span></div>
+            <div class="checkbox-row"><input type="checkbox" class="chkDay" value="Domingo"> <span style="color:var(--accent);">Domingo (Fechado / Não Funciona)</span></div>
+
+            <div class="input-group" style="margin-top:12px;">
+              <label>Horário (Abertura às Fechamento):</label>
+              <input type="text" id="cfgHoursFormat" class="input-box" value="08:00 às 19:00">
+            </div>
+
+            <button class="btn-primary" onclick="salvarHorarios()">Aplicar Horários aos Dias Selecionados</button>
+          </div>
+
+          <!-- FORMULARIO 5: SERVIÇOS E PREÇOS -->
           <div class="table-card">
             <div class="table-title">✂️ Serviços & Tabela de Preços</div>
             <div class="input-group">
@@ -289,9 +323,9 @@
 
   </div>
 
-  <!-- MODAIS DE SEGURANÇA -->
-  <div class="modal-overlay" id="modalFinance">
-    <div class="modal-content">
+  <!-- MODAL PROTEÇÃO FINANCEIRA COM FECHAMENTO AO CLICAR FORA -->
+  <div class="modal-overlay" id="modalFinance" onclick="closeModalOutside(event, 'modalFinance')">
+    <div class="modal-content" onclick="event.stopPropagation()">
       <h3 style="margin-bottom:10px;">🔒 Acesso Financeiro Restrito</h3>
       <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Digite a senha financeira para liberar os relatórios:</p>
       <input type="password" id="inputFinancePassConfirm" class="input-box" placeholder="Senha Financeira" style="margin-bottom:15px;">
@@ -299,8 +333,9 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="modalMaster">
-    <div class="modal-content">
+  <!-- MODAL PROTEÇÃO CONTROL COM FECHAMENTO AO CLICAR FORA -->
+  <div class="modal-overlay" id="modalMaster" onclick="closeModalOutside(event, 'modalMaster')">
+    <div class="modal-content" onclick="event.stopPropagation()">
       <h3 style="margin-bottom:10px;">⚡ Acesso Marcaz Control</h3>
       <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Digite a senha Mestre da Jhovis Tecnologia:</p>
       <input type="password" id="inputMasterPassConfirm" class="input-box" placeholder="Senha Mestre" style="margin-bottom:15px;">
@@ -313,9 +348,14 @@
     const SUPABASE_KEY = 'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let activeEmpresaId = null;
+    let loggedProName = 'Sena';
+    let totalProsCount = 2; // Simula lista com múltiplos profissionais
     let financePass = '1234';
     let chartEv = null, chartServ = null, chartHor = null;
+
+    function closeModalOutside(e, modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
 
     function doEmpresarioLogin() {
       const u = document.getElementById('loginUser').value.trim();
@@ -332,6 +372,9 @@
       else document.getElementById('txtCompanyHeader').innerText = 'Barbearia VIP - Várzea da Palma';
 
       loadRealtimeAgendamentos();
+
+      // AUTO-REFRESH AUTOMÁTICO A CADA 2 MINUTOS (120000ms)
+      setInterval(loadRealtimeAgendamentos, 120000);
     }
 
     function switchGestorTab(tabName) {
@@ -377,20 +420,28 @@
       tbody.innerHTML = '';
 
       const demos = [
-        { hora: '09:00', cli: 'Carlos Eduardo', serv: 'Corte + Barba', dur: 75, pro: 'Sena', val: 'R$ 80,00' },
-        { hora: '10:30', cli: 'Jon Teste Silva', serv: 'Corte / Cabelo', dur: 45, pro: 'Sena', val: 'R$ 50,00' },
-        { hora: '14:00', cli: 'Matheus Oliveira', serv: 'Barba / Design', dur: 30, pro: 'Ana', val: 'R$ 30,00' },
-        { hora: '15:30', cli: 'Guilherme Santos', serv: 'Corte + Sobrancelha', dur: 50, pro: 'Sena', val: 'R$ 60,00' }
+        { hora: '09:00', cli: 'Carlos Eduardo', phone: '38999887766', serv: 'Corte + Barba', dur: 75, pro: 'Sena', val: 'R$ 80,00' },
+        { hora: '10:30', cli: 'Jon Teste Silva', phone: '31991124556', serv: 'Corte / Cabelo', dur: 45, pro: 'Sena', val: 'R$ 50,00' },
+        { hora: '14:00', cli: 'Matheus Oliveira', phone: '38988223344', serv: 'Barba / Design', dur: 30, pro: 'Ana', val: 'R$ 30,00' },
+        { hora: '15:30', cli: 'Guilherme Santos', phone: '38991112233', serv: 'Corte + Sobrancelha', dur: 50, pro: 'Sena', val: 'R$ 60,00' }
       ];
 
       demos.forEach(item => {
         const tr = document.createElement('tr');
+        
+        // DESTAQUE DE COR SE HOUVER MÚLTIPLOS PROFISSIONAIS E FOR O LOGADO
+        let proDisplay = item.pro;
+        if (totalProsCount > 1 && item.pro === loggedProName) {
+          proDisplay = `<span class="pro-highlight">★ ${item.pro}</span>`;
+        }
+
         tr.innerHTML = `
           <td><strong>${item.hora}</strong></td>
           <td>${item.cli}</td>
+          <td><a href="https://wa.me/55${item.phone}" target="_blank" class="btn-whats-app">💬 WhatsApp</a></td>
           <td>${item.serv}</td>
           <td>${item.dur} min</td>
-          <td>${item.pro}</td>
+          <td>${proDisplay}</td>
           <td style="color:var(--primary); font-weight:bold;">${item.val}</td>
           <td><span style="color:var(--success); font-weight:bold;">● Confirmado</span></td>
         `;
@@ -398,12 +449,15 @@
       });
     }
 
+    function exportClientListPDF() {
+      alert('📄 Gerando e baixando arquivo PDF com a lista completa de Clientes, Telefones e Histórico de Agendamentos...');
+    }
+
     function initCharts() {
       if (chartEv) chartEv.destroy();
       if (chartServ) chartServ.destroy();
       if (chartHor) chartHor.destroy();
 
-      // 1. Evolução do Faturamento (Linha)
       const ctx1 = document.getElementById('chartEvolucao').getContext('2d');
       chartEv = new Chart(ctx1, {
         type: 'line',
@@ -414,7 +468,6 @@
         options: { responsive: true, maintainAspectRatio: false }
       });
 
-      // 2. Serviços Mais Vendidos (Rosca/Donut)
       const ctx2 = document.getElementById('chartServicos').getContext('2d');
       chartServ = new Chart(ctx2, {
         type: 'doughnut',
@@ -425,7 +478,6 @@
         options: { responsive: true, maintainAspectRatio: false }
       });
 
-      // 3. Horários de Maior Movimento (Barras)
       const ctx3 = document.getElementById('chartHorarios').getContext('2d');
       chartHor = new Chart(ctx3, {
         type: 'bar',
@@ -437,10 +489,10 @@
       });
     }
 
-    function salvarDadosEmpresa() { alert('Identidade visual e tema atualizados!'); }
+    function salvarDadosEmpresa() { alert('Identidade visual e tema atualizados no aplicativo do cliente!'); }
     function salvarRedesSociais() { alert('Redes sociais atualizadas!'); }
-    function cadastrarFuncionario() { alert('Novo funcionário cadastrado com sucesso!'); }
-    function salvarHorarios() { alert('Horários de funcionamento atualizados!'); }
+    function cadastrarFuncionario() { alert('Novo atendente cadastrado com suas permissões de acesso salvas!'); }
+    function salvarHorarios() { alert('Horários de funcionamento aplicados aos dias da semana!'); }
     function salvarNovoServico() { alert('Novo serviço adicionado à tabela!'); }
   </script>
 </body>
