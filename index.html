@@ -2,224 +2,453 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestor SaaS - Jhovis Tecnologia</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Agendamento Online - Marcaz / Jhovis Tecnologia</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg-primary: #0a0a0c;
-      --bg-card: #14151b;
-      --bg-header: #070709;
-      --text-main: #f0f0f5;
-      --text-muted: #8e8ea0;
+      --bg-body: #0d0e12;
+      --bg-card: #16181f;
       --primary: #00e5ff;
       --accent: #ff3b30;
-      --border-color: #222530;
-      --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color-scheme: dark; /* FORÇA ÍCONES NATIVOS DO NAVEGADOR A FICAREM CLAROS */
+      --text-main: #ffffff;
+      --text-muted: #9a9ab0;
+      --border: #222533;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); }
-    body { background-color: var(--bg-primary); color: var(--text-main); }
-
-    /* TRAVA DE LICENÇA */
-    #lockScreen {
-      display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background-color: #070709; z-index: 9999; flex-direction: column;
-      justify-content: center; align-items: center; text-align: center; padding: 20px;
-    }
-    .lock-card { background: #14151b; border: 1px solid var(--accent); border-radius: 16px; padding: 35px; max-width: 520px; }
-
-    header {
-      background-color: var(--bg-header); padding: 15px 20px; display: flex;
-      justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
-      border-bottom: 2px solid var(--primary);
-    }
-    .brand-title { font-size: 1.1rem; font-weight: bold; }
-    .brand-subtitle { font-size: 0.75rem; color: var(--primary); letter-spacing: 1px; }
-
-    .status-badge-lic {
-      background: rgba(0, 229, 255, 0.1); border: 1px solid var(--primary);
-      color: var(--primary); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;
-    }
-
-    .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
-
-    .filter-bar {
-      background: var(--bg-card); border: 1px solid var(--border-color);
-      border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex;
-      justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
-    }
-    .filter-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .filter-controls label { font-size: 0.85rem; color: var(--text-muted); }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     
-    /* CORREÇÃO VISUAL DO ÍCONE DO CALENDÁRIO */
-    .filter-controls input[type="date"] {
-      background: #070709; border: 1px solid var(--primary); color: #fff;
-      padding: 8px 12px; border-radius: 6px; font-size: 0.85rem;
-    }
-    .filter-controls input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(62%) sepia(100%) saturate(2500%) hue-rotate(150deg) brightness(100%) contrast(105%);
-      cursor: pointer;
+    body { 
+      background-color: var(--bg-body); color: var(--text-main); 
+      display: flex; justify-content: center; min-height: 100vh; padding-bottom: 90px; position: relative;
     }
 
-    .btn-pdf {
-      background: linear-gradient(90deg, #ff3b30 0%, #ff6b00 100%);
-      color: #fff; border: none; padding: 10px 18px; border-radius: 8px;
-      font-size: 0.85rem; font-weight: bold; cursor: pointer;
+    .mobile-app { width: 100%; max-width: 480px; padding: 20px; position: relative; z-index: 1; }
+
+    .profile-card {
+      background: linear-gradient(135deg, rgba(22, 24, 31, 0.95) 0%, rgba(31, 34, 46, 0.95) 100%);
+      border: 1px solid var(--border); border-radius: 16px; padding: 18px;
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;
     }
+    .profile-top { display: flex; align-items: center; justify-content: space-between; }
+    .profile-left { display: flex; align-items: center; gap: 12px; }
+    .profile-avatar {
+      width: 50px; height: 50px; border-radius: 50%;
+      background-color: var(--primary); display: flex; align-items: center;
+      justify-content: center; font-weight: bold; color: #000; font-size: 1.2rem;
+    }
+    .profile-info h1 { font-size: 1rem; margin-bottom: 2px; }
+    .profile-info p { font-size: 0.75rem; color: var(--text-muted); }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
-    .stat-card { background-color: var(--bg-card); padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); }
-    .stat-card h3 { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; }
-    .stat-card .value { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+    .social-bar { display: flex; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+    .social-btn {
+      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+      color: #fff; padding: 6px 12px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .social-icon { width: 14px; height: 14px; fill: currentColor; }
 
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 25px; }
-    .chart-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; }
-    .chart-card h2 { font-size: 0.95rem; color: var(--primary); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
-    .chart-container { position: relative; height: 220px; width: 100%; }
+    .welcome-banner { background: rgba(0, 229, 255, 0.08); border: 1px solid var(--primary); color: #e0f7fa; padding: 12px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 20px; text-align: center; }
 
-    /* REDES SOCIAIS CADASTRADAS */
-    .social-config { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 25px; }
-    .social-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; margin-bottom: 15px; }
-    .social-inputs input { background: #070709; border: 1px solid var(--border-color); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; }
-    .btn-save-social { background: var(--primary); color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .auth-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px 20px; text-align: center; }
+    .auth-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 8px; color: #fff; }
+    .auth-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px; }
+
+    .auth-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .btn-tab { flex: 1; background: #0d0e12; border: 1px solid var(--border); color: var(--text-muted); padding: 12px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+    .btn-tab.active { border-color: var(--primary); color: var(--primary); background: rgba(0,229,255,0.08); }
+
+    .input-box { width: 100%; background: #0d0e12; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 10px; font-size: 0.9rem; margin-bottom: 12px; outline: none; }
+    .input-box:focus { border-color: var(--primary); }
+    .input-label { text-align: left; font-size: 0.75rem; color: var(--primary); margin-bottom: 4px; display: block; font-weight: bold; }
+    
+    .btn-login { width: 100%; background: var(--primary); color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-bottom: 15px; margin-top: 5px; }
+    .btn-register-link { background: none; border: none; color: var(--primary); font-size: 0.82rem; text-decoration: underline; cursor: pointer; padding: 8px; display: inline-block; font-weight: bold; }
+
+    .error-msg { background: rgba(255, 59, 48, 0.2); border: 1px solid var(--accent); color: #ffb3b0; padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 15px; display: none; text-align: center; font-weight: bold; }
+
+    .section-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: bold; }
+
+    .date-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+    .date-card { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 4px; border-radius: 10px; text-align: center; cursor: pointer; }
+    .date-card.selected { border-color: var(--primary); background: rgba(0, 229, 255, 0.1); }
+    .date-day { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+    .date-num { font-weight: bold; font-size: 0.95rem; color: var(--text-main); margin-top: 2px; }
+
+    .pro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+    .pro-card { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 6px; border-radius: 10px; text-align: center; cursor: pointer; }
+    .pro-card.selected { border-color: var(--primary); background: rgba(0, 229, 255, 0.08); }
+    .pro-name { font-weight: bold; font-size: 0.85rem; }
+    .pro-role { font-size: 0.7rem; color: var(--text-muted); }
+
+    .services-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .service-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .service-card.selected { border-color: var(--primary); background: rgba(0, 229, 255, 0.08); }
+    .service-checkbox { width: 20px; height: 20px; border-radius: 4px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 0.75rem; font-weight: bold; color: #000; }
+    .service-card.selected .service-checkbox { background: var(--primary); border-color: var(--primary); }
+    .service-left { display: flex; align-items: center; }
+
+    .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+    .time-chip { background: var(--bg-card); border: 1px solid var(--border); padding: 12px; border-radius: 10px; text-align: center; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+    .time-chip.selected { background: var(--primary); color: #000; border-color: var(--primary); }
+    .time-chip.blocked { background: rgba(255, 59, 48, 0.12); color: var(--accent); border: 1px solid var(--accent); text-decoration: line-through; cursor: not-allowed; opacity: 0.85; }
+
+    .notice-box { background: rgba(255, 204, 0, 0.08); border: 1px solid #ffcc00; color: #ffdd66; padding: 12px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 20px; text-align: center; line-height: 1.4; }
+
+    .bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #101117; border-top: 1px solid var(--border); padding: 12px 20px; z-index: 10; }
+    .btn-confirm { width: 100%; background: linear-gradient(90deg, var(--primary) 0%, #00b0ff 100%); color: #000; border: none; padding: 14px; border-radius: 12px; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
+
+    .footer-whitelabel { text-align: center; margin-top: 15px; font-size: 0.75rem; color: var(--text-muted); }
   </style>
 </head>
 <body>
 
-  <!-- TELA DE BLOQUEIO ATUALIZADA -->
-  <div id="lockScreen">
-    <div class="lock-card">
-      <div style="font-size:3rem; margin-bottom:10px;">🔒</div>
-      <h2 style="color:var(--accent); margin-bottom:10px;">Acesso Suspenso Temporariamente</h2>
-      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px; line-height: 1.5;">
-        Identificamos uma pendência na sua licença mensal.<br><br>
-        Para regularizar o acesso e liberar sua agenda para seus clientes, efetue o pagamento e envie o comprovante para o WhatsApp do Suporte.
-      </p>
-      <button class="btn-pdf" onclick="alert('Redirecionando para envio do comprovante via WhatsApp...')">💬 Falar com Suporte Jhovis</button>
+  <div class="mobile-app">
+    <div class="profile-card">
+      <div class="profile-top">
+        <div class="profile-left">
+          <div class="profile-avatar">J</div>
+          <div class="profile-info">
+            <h1>Salão & Barbearia - Jhovis</h1>
+            <p>📍 Várzea da Palma - MG</p>
+          </div>
+        </div>
+      </div>
+      <div class="social-bar">
+        <a href="https://instagram.com" target="_blank" class="social-btn">
+          <svg class="social-icon" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+          Instagram
+        </a>
+        <a href="https://wa.me/5538999998888" target="_blank" class="social-btn">
+          <svg class="social-icon" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
+          WhatsApp
+        </a>
+        <a href="https://facebook.com" target="_blank" class="social-btn">
+          <svg class="social-icon" viewBox="0 0 24 24"><path d="M9 8H6v4h3v12h5V12h3.642L18 8h-4V6.333C14 5.374 14.5 5 15.5 5H18V0h-3.808C10.592 0 9 1.847 9 5.052V8z"/></svg>
+          Facebook
+        </a>
+        <a href="https://tiktok.com" target="_blank" class="social-btn">
+          <svg class="social-icon" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.82.56-1.31 1.52-1.33 2.52-.02.99.4 1.97 1.14 2.59.88.73 2.11.9 3.17.49 1.01-.38 1.76-1.34 1.88-2.42.06-1.89.02-3.79.03-5.68V.02z"/></svg>
+          TikTok
+        </a>
+      </div>
     </div>
-  </div>
 
-  <div id="mainDashboard">
-    <header>
-      <div>
-        <div class="brand-title">Marcaz SaaS - Painel Gestor</div>
-        <div class="brand-subtitle">POWERED BY JHOVIS TECNOLOGIA</div>
-      </div>
-      <div style="display:flex; gap:10px; align-items:center;">
-        <button onclick="window.location.href='admin.html'" style="background:rgba(255,255,255,0.1); border:1px solid #fff; color:#fff; padding:6px 12px; border-radius:20px; font-size:0.75rem; font-weight:bold; cursor:pointer;">⚡ Marcaz Control</button>
-        <div class="status-badge-lic"><span style="color:#2ea44f;">●</span> Licença Ativa</div>
-      </div>
-    </header>
+    <!-- TELA 1: LOGIN OU CADASTRO -->
+    <div id="authScreen" class="auth-container">
+      
+      <!-- LOGIN VIEW -->
+      <div id="loginView">
+        <div class="auth-title">Acesse sua Conta</div>
+        <div class="auth-desc">Informe seu Telefone ou CPF para entrar na agenda.</div>
 
-    <div class="container" id="reportContent">
-      <div class="filter-bar">
-        <div class="filter-controls">
-          <label for="startDate">Filtrar a partir de:</label>
-          <input type="date" id="startDate" value="2026-10-01" min="2026-10-01">
-          <button style="background:var(--primary); color:#000; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="updateData()">Aplicar Filtro</button>
+        <div class="auth-tabs">
+          <button type="button" class="btn-tab active" id="tabPhone" onclick="setMode('phone')">📱 Por Telefone</button>
+          <button type="button" class="btn-tab" id="tabCPF" onclick="setMode('cpf')">🪪 Por CPF</button>
         </div>
-        <button class="btn-pdf" onclick="exportPDF()">📄 Baixar Relatório Financeiro (PDF)</button>
-      </div>
 
-      <div class="stats-grid">
-        <div class="stat-card"><h3>Faturamento Hoje</h3><div class="value">R$ 890,00</div></div>
-        <div class="stat-card"><h3>Faturamento Semanal</h3><div class="value">R$ 4.350,00</div></div>
-        <div class="stat-card"><h3>Faturamento Mensal</h3><div class="value">R$ 18.290,00</div></div>
-        <div class="stat-card"><h3>Atendimentos no Mês</h3><div class="value">312</div></div>
+        <div id="loginErrorMsg" class="error-msg"></div>
+
+        <span class="input-label" id="lblLoginType">Digite apenas os números do WhatsApp:</span>
+        <input type="text" id="inputLoginValue" class="input-box" placeholder="(99) 99999-9999" oninput="maskActiveInput(this)">
+        
+        <button type="button" class="btn-login" onclick="executeLogin()">Entrar na Agenda</button>
+        <br>
+        <button type="button" class="btn-register-link" onclick="openRegisterView()">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
       </div>
 
-      <div class="charts-grid">
-        <div class="chart-card">
-          <h2>📈 Evolução do Faturamento (Diário / Semanal / Mensal)</h2>
-          <div class="chart-container"><canvas id="revenueChart"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <h2>✂️ Serviços Mais Vendidos</h2>
-          <div class="chart-container"><canvas id="servicesChart"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <h2>⏰ Horários de Maior Movimento</h2>
-          <div class="chart-container"><canvas id="hoursChart"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <h2>📅 Dias da Semana com Maior Movimento</h2>
-          <div class="chart-container"><canvas id="daysChart"></canvas></div>
-        </div>
-      </div>
+      <!-- REGISTER VIEW -->
+      <div id="registerView" style="display: none;">
+        <div class="auth-title">Novo Cadastro</div>
+        <div class="auth-desc">Preencha seus dados para realizar agendamentos.</div>
 
-      <!-- REDES SOCIAIS CADASTRADAS (COM TIKTOK E BOTÃO SALVAR) -->
-      <div class="social-config">
-        <h2 style="font-size:0.95rem; color:var(--primary); margin-bottom:10px;">🌐 Redes Sociais Cadastradas</h2>
-        <div class="social-inputs">
-          <input type="text" id="instaLink" placeholder="Link do Instagram" value="https://instagram.com">
-          <input type="text" id="whatsLink" placeholder="WhatsApp da Empresa" value="https://wa.me/5538999998888">
-          <input type="text" id="faceLink" placeholder="Link do Facebook" value="https://facebook.com">
-          <input type="text" id="tiktokLink" placeholder="Link do TikTok" value="https://tiktok.com">
-        </div>
-        <button class="btn-save-social" onclick="alert('✅ Redes Sociais salvas com sucesso!')">💾 Salvar Redes Sociais</button>
+        <span class="input-label">Seu Nome Completo:</span>
+        <input type="text" id="regName" class="input-box" placeholder="Digite seu nome completo">
+
+        <span class="input-label">Seu WhatsApp:</span>
+        <input type="text" id="regPhone" class="input-box" placeholder="(99) 99999-9999" oninput="applyPhoneMask(this)">
+
+        <span class="input-label">Seu CPF:</span>
+        <input type="text" id="regCPF" class="input-box" placeholder="123.456.789-00" oninput="applyCPFMask(this)">
+
+        <button type="button" class="btn-login" onclick="executeRegister()">Finalizar Cadastro e Acessar</button>
+        <br>
+        <button type="button" class="btn-register-link" onclick="openLoginView()">Já tenho cadastro? Voltar ao Login</button>
       </div>
 
     </div>
+
+    <!-- TELA 2: AGENDAMENTO -->
+    <div id="bookingScreen" style="display: none;">
+      <div class="welcome-banner" id="welcomeBanner"></div>
+
+      <div class="section-title">1. Escolha a Data</div>
+      <div class="date-grid">
+        <div class="date-card selected" onclick="selectDate(this, 'Hoje, Sab')"><div class="date-day">Hoje</div><div class="date-num">Sáb</div></div>
+        <div class="date-card" onclick="selectDate(this, 'Seg, 28/09')"><div class="date-day">Seg</div><div class="date-num">28/09</div></div>
+        <div class="date-card" onclick="selectDate(this, 'Ter, 29/09')"><div class="date-day">Ter</div><div class="date-num">29/09</div></div>
+        <div class="date-card" onclick="selectDate(this, 'Qua, 30/09')"><div class="date-day">Qua</div><div class="date-num">30/09</div></div>
+      </div>
+
+      <div class="section-title">2. Escolha o Profissional</div>
+      <div class="pro-grid">
+        <div class="pro-card selected" onclick="selectPro(this, 'Sena')"><div class="pro-name">Sena</div><div class="pro-role">Master Barber</div></div>
+        <div class="pro-card" onclick="selectPro(this, 'Ana')"><div class="pro-name">Ana</div><div class="pro-role">Styling / Nails</div></div>
+        <div class="pro-card" onclick="selectPro(this, 'Próximo Livre')"><div class="pro-name">Próximo Livre</div><div class="pro-role">Atendimento Rápido</div></div>
+      </div>
+
+      <div class="section-title">3. Selecione os Serviços</div>
+      <div class="services-list">
+        <div class="service-card selected" onclick="toggleService(this, 45, 50, 'Corte / Cabelo')">
+          <div class="service-left"><div class="service-checkbox">✓</div><div><div style="font-weight:600; font-size:0.9rem;">Corte / Cabelo</div><div style="font-size:0.78rem; color:var(--text-muted);">⏱️ 45 min</div></div></div>
+          <div style="font-size:0.95rem; font-weight:bold; color:var(--primary);">R$ 50,00</div>
+        </div>
+        <div class="service-card" onclick="toggleService(this, 30, 30, 'Barba / Design')">
+          <div class="service-left"><div class="service-checkbox"></div><div><div style="font-weight:600; font-size:0.9rem;">Barba / Design</div><div style="font-size:0.78rem; color:var(--text-muted);">⏱️ 30 min</div></div></div>
+          <div style="font-size:0.95rem; font-weight:bold; color:var(--primary);">R$ 30,00</div>
+        </div>
+      </div>
+
+      <div class="section-title">4. Horários Disponíveis</div>
+      <div class="time-grid" id="timeGrid"></div>
+
+      <div class="notice-box">
+        ⏰ <strong>ATENÇÃO AO HORÁRIO:</strong><br>
+        Por favor, chegue <strong>10 minutos antes</strong> do seu horário.<br>
+        Aguardaremos tolerância máxima de apenas <strong>5 minutos de atraso</strong>.
+      </div>
+
+      <div class="bottom-bar">
+        <button type="button" class="btn-confirm" id="btnConfirm" onclick="confirmBooking()">Confirmar Agendamento (R$ 50,00)</button>
+      </div>
+    </div>
+
+    <div class="footer-whitelabel">POWERED BY <strong>JHOVIS TECNOLOGIA</strong></div>
   </div>
 
   <script>
-    const licenseStatus = 'ativo';
+    const SUPABASE_URL = 'https://joadjyqxvpfhgnihezyp.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    window.onload = function() {
-      if(licenseStatus === 'bloqueado') {
-        document.getElementById('lockScreen').style.display = 'flex';
-        document.getElementById('mainDashboard').style.display = 'none';
+    let currentMode = 'phone';
+    let currentUser = null;
+
+    function applyPhoneMask(el) {
+      let v = el.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length === 0) el.value = '';
+      else if (v.length <= 2) el.value = '(' + v;
+      else if (v.length <= 7) el.value = '(' + v.slice(0, 2) + ') ' + v.slice(2);
+      else el.value = '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
+    }
+
+    function applyCPFMask(el) {
+      let v = el.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length === 0) el.value = '';
+      else if (v.length <= 3) el.value = v;
+      else if (v.length <= 6) el.value = v.slice(0, 3) + '.' + v.slice(3);
+      else if (v.length <= 9) el.value = v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6);
+      else el.value = v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
+    }
+
+    function maskActiveInput(el) {
+      if (currentMode === 'phone') {
+        applyPhoneMask(el);
+      } else {
+        applyCPFMask(el);
+      }
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      const inp = document.getElementById('inputLoginValue');
+      const err = document.getElementById('loginErrorMsg');
+      
+      err.style.display = 'none';
+      inp.value = '';
+
+      if (mode === 'phone') {
+        document.getElementById('tabPhone').className = 'btn-tab active';
+        document.getElementById('tabCPF').className = 'btn-tab';
+        document.getElementById('lblLoginType').innerText = 'Digite apenas os números do WhatsApp:';
+        inp.placeholder = '(99) 99999-9999';
+      } else {
+        document.getElementById('tabPhone').className = 'btn-tab';
+        document.getElementById('tabCPF').className = 'btn-tab active';
+        document.getElementById('lblLoginType').innerText = 'Digite apenas os números do CPF:';
+        inp.placeholder = '123.456.789-00';
+      }
+      inp.focus();
+    }
+
+    function openRegisterView() {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('registerView').style.display = 'block';
+    }
+
+    function openLoginView() {
+      document.getElementById('registerView').style.display = 'none';
+      document.getElementById('loginView').style.display = 'block';
+    }
+
+    async function executeLogin() {
+      const inp = document.getElementById('inputLoginValue');
+      const rawVal = inp.value.trim();
+      const err = document.getElementById('loginErrorMsg');
+      err.style.display = 'none';
+
+      if (!rawVal) {
+        err.innerText = "Por favor, digite seu Telefone ou CPF para continuar.";
+        err.style.display = 'block';
         return;
       }
 
-      new Chart(document.getElementById('revenueChart'), {
-        type: 'line',
-        data: {
-          labels: ['Dia 01', 'Dia 05', 'Dia 10', 'Dia 15', 'Dia 20', 'Dia 25', 'Dia 30'],
-          datasets: [{ label: 'Faturamento (R$)', data: [450, 890, 1200, 1100, 1450, 1800, 2100], borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,0.1)', fill: true }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
+      const digitsOnly = rawVal.replace(/\D/g, '');
 
-      new Chart(document.getElementById('servicesChart'), {
-        type: 'doughnut',
-        data: {
-          labels: ['Corte + Barba', 'Corte Tradicional', 'Manicure/Pedicure', 'Barboterapia'],
-          datasets: [{ data: [142, 98, 65, 41], backgroundColor: ['#00e5ff', '#00b0ff', '#ff3b30', '#ffcc00'] }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
+      const { data, error } = await supabase
+        .from('clientes_finais')
+        .select('*');
 
-      new Chart(document.getElementById('hoursChart'), {
-        type: 'bar',
-        data: {
-          labels: ['09:00', '10:30', '11:20', '14:00', '15:30', '17:00', '18:30'],
-          datasets: [{ label: 'Atendimentos', data: [12, 28, 25, 18, 22, 32, 35], backgroundColor: '#00e5ff' }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
+      let foundClient = null;
 
-      new Chart(document.getElementById('daysChart'), {
-        type: 'bar',
-        data: {
-          labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-          datasets: [{ label: 'Movimento (%)', data: [45, 55, 60, 75, 90, 100], backgroundColor: '#ff3b30' }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-    };
+      if (data && data.length > 0) {
+        foundClient = data.find(c => {
+          const cPhone = (c.telefone || '').replace(/\D/g, '');
+          const cCpf = (c.cpf || '').replace(/\D/g, '');
+          return (cPhone === digitsOnly && digitsOnly.length > 0) || 
+                 (cCpf === digitsOnly && digitsOnly.length > 0) ||
+                 (c.telefone === rawVal) || 
+                 (c.cpf === rawVal);
+        });
+      }
 
-    function updateData() {
-      const dateVal = document.getElementById('startDate').value;
-      alert(`📅 Filtro aplicado para consultas a partir de: ${dateVal}`);
+      if (foundClient) {
+        currentUser = { name: foundClient.nome, isVeteran: true, lastVisit: foundClient.ultima_visita || '14/09/2026' };
+        openBookingScreen();
+      } else {
+        err.innerText = "Cliente não encontrado! Verifique os seus dados digitados.";
+        err.style.display = 'block';
+      }
     }
 
-    function exportPDF() {
-      const element = document.getElementById('reportContent');
-      html2pdf().from(element).save('Relatorio_Financeiro_Jhovis.pdf');
+    async function executeRegister() {
+      const name = document.getElementById('regName').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const cpf = document.getElementById('regCPF').value.trim();
+
+      if (!name || !phone || !cpf) {
+        alert('Preencha Nome, Telefone e CPF para realizar seu cadastro.');
+        return;
+      }
+
+      await supabase
+        .from('clientes_finais')
+        .insert([{ nome: name, telefone: phone, cpf: cpf }]);
+
+      currentUser = { name: name, isVeteran: false, lastVisit: null };
+      openBookingScreen();
+    }
+
+    function openBookingScreen() {
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('bookingScreen').style.display = 'block';
+
+      const banner = document.getElementById('welcomeBanner');
+      if (currentUser.isVeteran && currentUser.lastVisit) {
+        banner.innerHTML = '👋 Estamos felizes <strong>' + currentUser.name + '</strong>, de você ter voltado!<br>Sua última visita conosco foi no dia <strong>' + currentUser.lastVisit + '</strong>!';
+      } else {
+        banner.innerHTML = '🎉 Que bom ter você conosco aqui, <strong>' + currentUser.name + '</strong>!';
+      }
+
+      renderTimes();
+      updateTotals();
+    }
+
+    let currentDate = 'Hoje, Sab';
+    let currentPro = 'Sena';
+    let currentTime = '10:30';
+    let selectedServices = [{ name: 'Corte / Cabelo', duration: 45, price: 50 }];
+    const allTimes = ['09:00', '10:30', '11:00', '11:20', '14:00', '15:30'];
+
+    function toggleService(element, duration, price, name) {
+      const index = selectedServices.findIndex(s => s.name === name);
+      const checkbox = element.querySelector('.service-checkbox');
+      if (index > -1) {
+        if (selectedServices.length === 1) return alert('Selecione ao menos um serviço.');
+        selectedServices.splice(index, 1);
+        element.classList.remove('selected');
+        checkbox.innerText = '';
+      } else {
+        selectedServices.push({ name, duration, price });
+        element.classList.add('selected');
+        checkbox.innerText = '✓';
+      }
+      updateTotals();
+      renderTimes();
+    }
+
+    function updateTotals() {
+      const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+      document.getElementById('btnConfirm').innerText = 'Confirmar Agendamento (R$ ' + totalPrice + ',00 | ⏱️ ' + totalDuration + ' min)';
+    }
+
+    function renderTimes() {
+      const timeGrid = document.getElementById('timeGrid');
+      timeGrid.innerHTML = '';
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+
+      allTimes.forEach(time => {
+        const chip = document.createElement('div');
+        chip.className = 'time-chip';
+        chip.innerText = time;
+
+        let blocked = false;
+        if (currentPro === 'Sena' && time === '11:00' && currentDate === 'Hoje, Sab') blocked = true;
+        if (currentPro === 'Sena' && time === '11:00' && totalDuration > 40 && currentDate === 'Hoje, Sab') blocked = true;
+
+        if (blocked) {
+          chip.classList.add('blocked');
+          chip.title = 'Horário Ocupado';
+        } else {
+          if (time === currentTime) chip.classList.add('selected');
+          chip.onclick = () => selectTime(chip, time);
+        }
+        timeGrid.appendChild(chip);
+      });
+    }
+
+    function selectDate(e, d) {
+      document.querySelectorAll('.date-card').forEach(c => c.classList.remove('selected'));
+      e.classList.add('selected'); currentDate = d; renderTimes();
+    }
+    function selectPro(e, p) {
+      document.querySelectorAll('.pro-card').forEach(c => c.classList.remove('selected'));
+      e.classList.add('selected'); currentPro = p; renderTimes();
+    }
+    function selectTime(e, t) {
+      document.querySelectorAll('.time-chip').forEach(c => c.classList.remove('selected'));
+      e.classList.add('selected'); currentTime = t;
+    }
+
+    async function confirmBooking() {
+      const totalDur = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+      const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+      const serviceNames = selectedServices.map(s => s.name).join(', ');
+
+      await supabase
+        .from('agendamentos')
+        .insert([{
+          servicos_nomes: serviceNames,
+          duracao_total_min: totalDur,
+          valor_total: totalPrice,
+          data_agendamento: '2026-09-28',
+          hora_agendamento: currentTime
+        }]);
+
+      alert('🎉 AGENDAMENTO CONFIRMADO E SALVO EM NUVEM!\n\nCliente: ' + currentUser.name + '\nData: ' + currentDate + ' às ' + currentTime + '\nDuração Total: ' + totalDur + ' min\nProfissional: ' + currentPro + '\n\n⚠️ Lembre-se: Chegue 10 min antes. Tolerância de apenas 5 min!');
     }
   </script>
 </body>
