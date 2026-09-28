@@ -1,20 +1,17 @@
 {
-  "name": "saas-jhovis",
+  "name": "marcaz-saas",
   "version": "1.0.0",
-  "description": "SaaS Marcaz - Jhovis Tecnologia",
+  "description": "Sistema SaaS de Agendamento - Marcaz / Jhovis Tecnologia",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win nsis"
+    "build-exe": "electron-builder --win nsis"
   },
-  "build": {
-    "appId": "com.jhovis.marcaz",
-    "win": {
-      "target": "nsis"
-    }
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
   },
   "devDependencies": {
-    "electron": "^26.0.0",
-    "electron-builder": "^24.6.0"
+    "electron": "^26.6.10",
+    "electron-builder": "^24.13.3"
   }
 }
