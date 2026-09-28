@@ -59,7 +59,7 @@
       <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px;">Acesso Exclusivo Jhovis Tecnologia</p>
 
       <span class="input-label">Telefone de Acesso:</span>
-      <input type="text" id="ctrlUser" class="input-box" placeholder="(34) 99115-7546">
+      <input type="text" id="ctrlUser" class="input-box" placeholder="(99) 99999-9999" oninput="applyPhoneMask(this)">
 
       <span class="input-label">Senha Master:</span>
       <input type="password" id="ctrlPass" class="input-box" placeholder="••••••••">
@@ -164,6 +164,15 @@
 
     let chartInstance = null;
 
+    function applyPhoneMask(el) {
+      let v = el.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length === 0) el.value = '';
+      else if (v.length <= 2) el.value = '(' + v;
+      else if (v.length <= 7) el.value = '(' + v.slice(0, 2) + ') ' + v.slice(2);
+      else el.value = '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
+    }
+
     function applyCPFMask(el) {
       let v = el.value.replace(/\D/g, '');
       if (v.length > 11) v = v.slice(0, 11);
@@ -189,7 +198,7 @@
       const u = document.getElementById('ctrlUser').value.replace(/\D/g, '');
       const p = document.getElementById('ctrlPass').value;
 
-      if ((u === '34991157546' || u === '34991157546') && p === 'Eva31') {
+      if (u === '34991157546' && p === 'Eva31') {
         document.getElementById('loginControlView').style.display = 'none';
         document.getElementById('mainControlArea').style.display = 'block';
         onCompanySelectChange();
@@ -222,7 +231,6 @@
 
       empresasData[selKey].status = newStatus;
 
-      // Atualiza o texto da opção no Dropdown dinamicamente
       const opt = selEl.options[selEl.selectedIndex];
       opt.text = empresasData[selKey].nome + ' (' + (newStatus === 'ATIVO' ? 'Ativo' : 'Bloqueado') + ')';
 
