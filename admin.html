@@ -3,139 +3,133 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Marcaz Control - Jhovis Tecnologia</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Marcaz Control - Gestão Mestre Multi-Empresas</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg-primary: #070709;
-      --bg-card: #121318;
+      --bg-body: #07080b;
+      --bg-card: #12141c;
       --primary: #00e5ff;
       --accent: #ff3b30;
-      --border-color: #1e2029;
+      --success: #34c759;
       --text-main: #ffffff;
       --text-muted: #8e8ea0;
+      --border: #202333;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: var(--bg-primary); color: var(--text-main); padding: 20px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg-body); color: var(--text-main); padding: 25px; }
 
-    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 15px; margin-bottom: 20px; }
-    .brand-title { font-size: 1.3rem; font-weight: bold; color: var(--primary); }
+    .header-control { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 25px; }
+    .header-title { font-size: 1.3rem; font-weight: bold; }
+    .header-title span { color: var(--primary); font-size: 0.8rem; display: block; }
 
-    .grid-control { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px; }
-    .card-control { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
-    .card-control h2 { font-size: 1rem; color: var(--primary); margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+    .grid-control { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 25px; }
+    .card-control { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
 
-    select, input, button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #070709; color: #fff; margin-bottom: 12px; font-size: 0.85rem; }
-    button.btn-primary { background: var(--primary); color: #000; font-weight: bold; cursor: pointer; border: none; }
-    button.btn-danger { background: var(--accent); color: #fff; font-weight: bold; cursor: pointer; border: none; }
+    .input-box { width: 100%; background: #07080b; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 12px; outline: none; }
+    .btn-action { width: 100%; background: var(--primary); color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
+    .btn-danger { background: var(--accent); color: #fff; }
+    .btn-demo { background: rgba(0, 229, 255, 0.1); border: 1px solid var(--primary); color: var(--primary); }
 
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-    th, td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
-    th { color: var(--text-muted); }
-
-    .role-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: rgba(0,229,255,0.1); color: var(--primary); }
+    .badge-active { background: rgba(52, 199, 89, 0.2); color: #52ff88; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; }
+    .badge-blocked { background: rgba(255, 59, 48, 0.2); color: #ff7066; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; }
   </style>
 </head>
 <body>
 
-  <header>
-    <div>
-      <div class="brand-title">Marcaz Control - Gestão Central</div>
-      <div style="font-size: 0.8rem; color: var(--text-muted);">Painel do Proprietário - Jhovis Tecnologia</div>
+  <div class="header-control">
+    <div class="header-title">
+      ⚡ Marcaz Control - Módulo Mestre
+      <span>JHOVIS TECNOLOGIA - GESTÃO DE SAAS MULTI-TENANT</span>
     </div>
-    <div style="display:flex; gap:10px;">
-      <button class="btn-primary" onclick="window.location.href='index.html'" style="width:auto; margin:0;">👁️ Modo Apresentação</button>
-    </div>
-  </header>
-
-  <!-- 1. SELEÇÃO DE CLIENTE / EMPRESÁRIO -->
-  <div class="card-control" style="margin-bottom: 20px;">
-    <h2>🏢 Selecionar Cliente (Empresário)</h2>
-    <select id="clientSelect" onchange="loadClientData(this.value)">
-      <option value="1">Barbearia VIP - Várzea da Palma (Status: Ativo)</option>
-      <option value="2">Salão Beleza Real - Belo Horizonte (Status: Ativo)</option>
-      <option value="3">Estética & Spa Bella - Uberlândia (Status: Bloqueado)</option>
-    </select>
+    <a href="index.html" style="color: var(--primary); font-weight: bold; text-decoration: none; font-size: 0.85rem;">← Ver Visão do Cliente</a>
   </div>
 
-  <!-- 2. METRICAS FINANCEIRAS DO CLIENTE SELECIONADO -->
   <div class="grid-control">
+    
+    <!-- CARD 1: SELEÇÃO DE EMPRESAS & BLOQUEIO INDIVIDUAL -->
     <div class="card-control">
-      <h2>💰 Faturamento do Cliente</h2>
-      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Diário, Semanal e Mensal</p>
-      <div style="font-size:1.2rem; font-weight:bold; color:var(--primary); margin-bottom:5px;" id="fatHoje">Hoje: R$ 890,00</div>
-      <div style="font-size:1.2rem; font-weight:bold; color:var(--primary); margin-bottom:5px;" id="fatSemana">Semanal: R$ 4.350,00</div>
-      <div style="font-size:1.2rem; font-weight:bold; color:var(--primary);" id="fatMes">Mensal: R$ 18.290,00</div>
-    </div>
-
-    <div class="card-control">
-      <h2>🔒 Controle de Licença</h2>
-      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Status do Cliente no Sistema</p>
-      <button class="btn-danger" id="btnToggleLic" onclick="toggleLicence()">🔒 Bloquear Acesso por Inadimplência</button>
-      <button class="btn-primary" onclick="alert('✅ Licença renovada por mais 30 dias!')">💳 Confirmar Pagamento Mensal</button>
-    </div>
-
-    <div class="card-control">
-      <h2>💾 Gestão de Backups</h2>
-      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Rotina Automática: Diária às 23:59</p>
-      <button class="btn-primary" onclick="alert('📦 Backup completo gerado com sucesso!')">⬇️ Fazer Backup Agora</button>
-      <button style="background:#222530; color:#fff; border:none; cursor:pointer;" onclick="alert('📂 Selecione o arquivo de backup para restaurar.')">📂 Restaurar Backup</button>
-    </div>
-  </div>
-
-  <!-- 3. GESTÃO DA SUA EQUIPE E CARGOS -->
-  <div class="card-control">
-    <h2>👥 Usuários do Sistema Marcaz Control (Sua Equipe)</h2>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:15px;">
-      <input type="text" placeholder="Nome do Funcionário">
-      <input type="email" placeholder="E-mail">
-      <select>
-        <option value="Master">Cargo: Master</option>
-        <option value="Gerente">Cargo: Gerente</option>
-        <option value="Operador">Cargo: Operador</option>
+      <h3 style="margin-bottom: 15px; font-size: 1rem;">🏢 Empresas Parceiras</h3>
+      <label style="font-size: 0.75rem; color: var(--primary); font-weight: bold;">Selecione a Empresa:</label>
+      <select id="selEmpresa" class="input-box" onchange="updateEmpresaStatusView()">
+        <option value="empresa_1">Barbearia VIP - Várzea da Palma (Ativo)</option>
+        <option value="empresa_2">Salão Divas - Belo Horizonte (Ativo)</option>
+        <option value="empresa_3">Studio Plena - Uberlândia (Bloqueado)</option>
       </select>
-      <button class="btn-primary" onclick="alert('👤 Usuário cadastrado com sucesso!')">Adicionar Usuário</button>
+
+      <div style="margin-bottom: 15px;">
+        <span style="font-size: 0.8rem;">Status Atual: </span>
+        <span id="lblStatusEmpresa" class="badge-active">ATIVO</span>
+      </div>
+
+      <button class="btn-action btn-danger" onclick="toggleEmpresaStatus('bloquear')">🔒 Bloquear Acesso Individual</button>
+      <button class="btn-action" onclick="toggleEmpresaStatus('ativar')">🔓 Reativar Acesso Individual</button>
     </div>
 
-    <table>
-      <thead>
-        <tr><th>Nome</th><th>E-mail</th><th>Cargo</th><th>Ações</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Jonathan Sena</td><td>jonathan@jhovis.com.br</td><td><span class="role-badge">Master</span></td><td>Acesso Total</td></tr>
-        <tr><td>Carlos Suporte</td><td>carlos@jhovis.com.br</td><td><span class="role-badge" style="color:#ffcc00;">Gerente</span></td><td>Editar / Bloquear</td></tr>
-      </tbody>
-    </table>
+    <!-- CARD 2: CADASTRAR NOVA EMPRESA -->
+    <div class="card-control">
+      <h3 style="margin-bottom: 15px; font-size: 1rem;">➕ Cadastrar Nova Empresa / Licença</h3>
+      <input type="text" id="newEmpNome" class="input-box" placeholder="Razão Social / Nome Fantasia">
+      <input type="text" id="newEmpDoc" class="input-box" placeholder="CNPJ ou CPF do Proprietário">
+      <input type="email" id="newEmpEmail" class="input-box" placeholder="E-mail de Acesso do Gestor">
+      <button class="btn-action" onclick="cadastrarNovaEmpresa()">Criar Licença SaaS</button>
+    </div>
+
+    <!-- CARD 3: MODO APRESENTAÇÃO COMERCIAL & RESTAURAÇÃO DE DEMO -->
+    <div class="card-control">
+      <h3 style="margin-bottom: 15px; font-size: 1rem;">🎯 Modo Apresentação & Demonstração</h3>
+      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">Apresente modelos fictícios sem alterar dados reais:</p>
+      
+      <button class="btn-action btn-demo" onclick="openDemo('barbearia_noel')">💈 Barbearia Noel (Demonstração)</button>
+      <button class="btn-action btn-demo" onclick="openDemo('salao_divas')">💅 Salão Divas (Demonstração)</button>
+      <button class="btn-action btn-demo" onclick="openDemo('studio_plena')">✨ Studio Plena (Demonstração)</button>
+      
+      <hr style="border-color: var(--border); margin: 15px 0;">
+      
+      <button class="btn-action btn-danger" onclick="resetDemoData()">🔄 Restaurar Backup Fixo de Testes</button>
+    </div>
+
   </div>
 
   <script>
-    let isBlocked = false;
+    const SUPABASE_URL = 'https://joadjyqxvpfhgnihezyp.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    function toggleLicence() {
-      isBlocked = !isBlocked;
-      const btn = document.getElementById('btnToggleLic');
-      if(isBlocked) {
-        btn.innerText = '🔓 Reativar Acesso do Cliente';
-        btn.style.background = '#2ea44f';
-        alert('🚨 Acesso do cliente bloqueado temporariamente por inadimplência.');
-      } else {
-        btn.innerText = '🔒 Bloquear Acesso por Inadimplência';
-        btn.style.background = '#ff3b30';
-        alert('✅ Acesso do cliente reativado com sucesso!');
-      }
+    let empresaStatuses = {
+      'empresa_1': 'ATIVO',
+      'empresa_2': 'ATIVO',
+      'empresa_3': 'BLOQUEADO'
+    };
+
+    function updateEmpresaStatusView() {
+      const sel = document.getElementById('selEmpresa').value;
+      const st = empresaStatuses[sel] || 'ATIVO';
+      const lbl = document.getElementById('lblStatusEmpresa');
+      lbl.innerText = st;
+      lbl.className = st === 'ATIVO' ? 'badge-active' : 'badge-blocked';
     }
 
-    function loadClientData(clientId) {
-      if(clientId === '3') {
-        document.getElementById('fatHoje').innerText = 'Hoje: R$ 0,00';
-        document.getElementById('fatSemana').innerText = 'Semanal: R$ 0,00';
-        document.getElementById('fatMes').innerText = 'Mensal: R$ 0,00';
-      } else {
-        document.getElementById('fatHoje').innerText = 'Hoje: R$ 890,00';
-        document.getElementById('fatSemana').innerText = 'Semanal: R$ 4.350,00';
-        document.getElementById('fatMes').innerText = 'Mensal: R$ 18.290,00';
-      }
+    function toggleEmpresaStatus(action) {
+      const sel = document.getElementById('selEmpresa').value;
+      empresaStatuses[sel] = action === 'bloquear' ? 'BLOQUEADO' : 'ATIVO';
+      updateEmpresaStatusView();
+      alert(`Status da empresa selecionada alterado com sucesso para: ${empresaStatuses[sel]}`);
+    }
+
+    function cadastrarNovaEmpresa() {
+      const nome = document.getElementById('newEmpNome').value;
+      if (!nome) return alert('Informe o nome da empresa.');
+      alert(`Nova licença criada com sucesso para: ${nome}`);
+    }
+
+    function openDemo(type) {
+      window.open('index.html?demo=' + type, '_blank');
+    }
+
+    function resetDemoData() {
+      alert('🎉 Dados fictícios das 3 empresas de demonstração restaurados com sucesso para a versão padrão!');
     }
   </script>
 </body>
