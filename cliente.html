@@ -139,6 +139,7 @@
 
     <div id="authScreen" class="auth-container">
       
+      <!-- TELA DE LOGIN -->
       <div id="loginView" style="display: block;">
         <div class="auth-title">Acesse sua Conta</div>
         <div class="auth-desc">Informe seu Telefone ou CPF para entrar na agenda.</div>
@@ -160,18 +161,21 @@
         <button type="button" class="btn-register-link" id="btnGoRegister">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
       </div>
 
+      <!-- TELA DE CADASTRO COM MÁSCARAS E BOTÃO CORRIGIDOS -->
       <div id="registerView" style="display: none;">
         <div class="auth-title">Novo Cadastro</div>
         <div class="auth-desc">Preencha seus dados para realizar agendamentos.</div>
+
+        <div id="regErrorMsg" class="error-msg"></div>
 
         <span class="input-label">Seu Nome Completo:</span>
         <input type="text" id="regName" class="input-box" placeholder="Digite seu nome completo">
 
         <span class="input-label">Seu WhatsApp:</span>
-        <input type="text" id="regPhone" class="input-box" placeholder="(99) 99999-9999">
+        <input type="text" id="regPhone" class="input-box" placeholder="(99) 99999-9999" oninput="this.value = formatPhone(this.value)">
 
         <span class="input-label">Seu CPF:</span>
-        <input type="text" id="regCPF" class="input-box" placeholder="123.456.789-00">
+        <input type="text" id="regCPF" class="input-box" placeholder="123.456.789-00" oninput="this.value = formatCPF(this.value)">
 
         <button type="button" class="btn-login" id="btnDoRegister">Finalizar Cadastro e Acessar</button>
         <br>
@@ -180,6 +184,7 @@
 
     </div>
 
+    <!-- TELA DE AGENDAMENTO -->
     <div id="bookingScreen" style="display: none;">
       <div class="welcome-banner" id="welcomeBanner"></div>
 
@@ -241,7 +246,6 @@
       }
     } catch(e) {}
 
-    // APLICADOR DINÂMICO DE TEMAS
     function changeCompanyUnit(val) {
       var t = document.getElementById('appTitle');
       var c = document.getElementById('appCity');
@@ -250,13 +254,13 @@
 
       if (val === 'salao_divas') {
         t.innerText = 'Salão Divas'; c.innerText = '📍 Montes Claros - MG'; a.innerText = 'D';
-        r.style.setProperty('--primary', '#ffd700'); // Gold
+        r.style.setProperty('--primary', '#ffd700');
       } else if (val === 'studio_plena') {
         t.innerText = 'Studio Plena'; c.innerText = '📍 Uberlândia - MG'; a.innerText = 'P';
-        r.style.setProperty('--primary', '#b388ff'); // Purple
+        r.style.setProperty('--primary', '#b388ff');
       } else {
         t.innerText = 'Salão & Barbearia - Jhovis'; c.innerText = '📍 Várzea da Palma - MG'; a.innerText = 'J';
-        r.style.setProperty('--primary', '#00e5ff'); // Cyan
+        r.style.setProperty('--primary', '#00e5ff');
       }
     }
 
@@ -285,6 +289,7 @@
       var inpLogin = document.getElementById('inputLoginValue');
       var lblLogin = document.getElementById('lblLoginType');
       var errBox = document.getElementById('loginErrorMsg');
+      var regErrBox = document.getElementById('regErrorMsg');
       var btnResetPass = document.getElementById('btnResetPass');
 
       if(tabPhone) {
@@ -332,6 +337,37 @@
 
       if(btnGoRegister) btnGoRegister.onclick = function() { loginView.style.display = 'none'; registerView.style.display = 'block'; };
       if(btnGoLogin) btnGoLogin.onclick = function() { registerView.style.display = 'none'; loginView.style.display = 'block'; };
+
+      // AÇÃO DO BOTÃO FINALIZAR CADASTRO
+      var btnDoRegister = document.getElementById('btnDoRegister');
+      if(btnDoRegister) {
+        btnDoRegister.onclick = async function() {
+          var name = document.getElementById('regName').value.trim();
+          var phone = document.getElementById('regPhone').value.trim();
+          var cpf = document.getElementById('regCPF').value.trim();
+
+          regErrBox.style.display = 'none';
+
+          if (!name || !phone || !cpf) {
+            regErrBox.innerText = "Preencha Nome, WhatsApp e CPF para concluir o cadastro.";
+            regErrBox.style.display = 'block';
+            return;
+          }
+
+          if (supabaseClient) {
+            try {
+              await supabaseClient.from('clientes_finais').insert([{
+                nome: name,
+                telefone: phone,
+                cpf: cpf
+              }]);
+            } catch(e) {}
+          }
+
+          currentUser = { name: name, isVeteran: false };
+          openBooking();
+        };
+      }
 
       var btnLogin = document.getElementById('btnLogin');
       if(btnLogin) {
