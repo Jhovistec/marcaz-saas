@@ -45,9 +45,7 @@
       background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
       color: #fff; padding: 6px 12px; border-radius: 20px;
       font-size: 0.75rem; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-      transition: all 0.2s;
     }
-    .social-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(0,229,255,0.1); }
     .social-icon { width: 14px; height: 14px; fill: currentColor; }
 
     .welcome-banner { background: rgba(0, 229, 255, 0.08); border: 1px solid var(--primary); color: #e0f7fa; padding: 12px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 20px; text-align: center; }
@@ -57,7 +55,7 @@
     .auth-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px; }
 
     .auth-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .btn-tab { flex: 1; background: #0d0e12; border: 1px solid var(--border); color: var(--text-muted); padding: 12px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; user-select: none; }
+    .btn-tab { flex: 1; background: #0d0e12; border: 1px solid var(--border); color: var(--text-muted); padding: 12px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
     .btn-tab.active { border-color: var(--primary); color: var(--primary); background: rgba(0,229,255,0.08); }
 
     .input-box { width: 100%; background: #0d0e12; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 10px; font-size: 0.9rem; margin-bottom: 12px; outline: none; }
@@ -67,7 +65,7 @@
     .btn-login { width: 100%; background: var(--primary); color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-bottom: 15px; margin-top: 5px; }
     .btn-register-link { background: none; border: none; color: var(--primary); font-size: 0.82rem; text-decoration: underline; cursor: pointer; padding: 8px; display: inline-block; font-weight: bold; }
 
-    .error-msg { background: rgba(255, 59, 48, 0.15); border: 1px solid var(--accent); color: #ffb3b0; padding: 12px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 15px; display: none; text-align: center; line-height: 1.3; }
+    .error-msg { background: rgba(255, 59, 48, 0.2); border: 1px solid var(--accent); color: #ffb3b0; padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 15px; display: none; text-align: center; font-weight: bold; }
 
     .section-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: bold; }
 
@@ -139,27 +137,27 @@
     <!-- TELA 1: LOGIN OU CADASTRO -->
     <div id="authScreen" class="auth-container">
       
-      <!-- TELA DE LOGIN -->
+      <!-- LOGIN VIEW -->
       <div id="loginView">
         <div class="auth-title">Acesse sua Conta</div>
         <div class="auth-desc">Informe seu Telefone ou CPF para entrar na agenda.</div>
 
         <div class="auth-tabs">
-          <button type="button" class="btn-tab active" id="tabPhone" onclick="setLoginMode('phone')">📱 Por Telefone</button>
-          <button type="button" class="btn-tab" id="tabCPF" onclick="setLoginMode('cpf')">🪪 Por CPF</button>
+          <button type="button" class="btn-tab active" id="tabPhone" onclick="setMode('phone')">📱 Por Telefone</button>
+          <button type="button" class="btn-tab" id="tabCPF" onclick="setMode('cpf')">🪪 Por CPF</button>
         </div>
 
         <div id="loginErrorMsg" class="error-msg"></div>
 
         <span class="input-label" id="lblLoginType">Digite apenas os números do WhatsApp:</span>
-        <input type="text" id="inputLoginValue" class="input-box" placeholder="(99) 99999-9999" oninput="applyInputMask(this)">
+        <input type="text" id="inputLoginValue" class="input-box" placeholder="(99) 99999-9999" onkeyup="maskActiveInput(this)" onblur="maskActiveInput(this)">
         
-        <button type="button" class="btn-login" onclick="doLogin()">Entrar na Agenda</button>
+        <button type="button" class="btn-login" onclick="executeLogin()">Entrar na Agenda</button>
         <br>
-        <button type="button" class="btn-register-link" onclick="goToRegister()">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
+        <button type="button" class="btn-register-link" onclick="openRegisterView()">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
       </div>
 
-      <!-- TELA DE REGISTRO -->
+      <!-- REGISTER VIEW -->
       <div id="registerView" style="display: none;">
         <div class="auth-title">Novo Cadastro</div>
         <div class="auth-desc">Preencha seus dados para realizar agendamentos.</div>
@@ -167,16 +165,17 @@
         <span class="input-label">Seu Nome Completo:</span>
         <input type="text" id="regName" class="input-box" placeholder="Digite seu nome completo">
 
-        <span class="input-label">Seu WhatsApp (Digite apenas os números):</span>
-        <input type="text" id="regPhone" class="input-box" placeholder="(99) 99999-9999" oninput="formatPhoneInput(this)">
+        <span class="input-label">Seu WhatsApp:</span>
+        <input type="text" id="regPhone" class="input-box" placeholder="(99) 99999-9999" onkeyup="applyPhoneMask(this)">
 
-        <span class="input-label">Seu CPF (Digite apenas os números):</span>
-        <input type="text" id="regCPF" class="input-box" placeholder="123.456.789-00" oninput="formatCPFInput(this)">
+        <span class="input-label">Seu CPF:</span>
+        <input type="text" id="regCPF" class="input-box" placeholder="123.456.789-00" onkeyup="applyCPFMask(this)">
 
-        <button type="button" class="btn-login" onclick="doRegister()">Finalizar Cadastro e Acessar</button>
+        <button type="button" class="btn-login" onclick="executeRegister()">Finalizar Cadastro e Acessar</button>
         <br>
-        <button type="button" class="btn-register-link" onclick="goToLogin()">Já tenho cadastro? Voltar ao Login</button>
+        <button type="button" class="btn-register-link" onclick="openLoginView()">Já tenho cadastro? Voltar ao Login</button>
       </div>
+
     </div>
 
     <!-- TELA 2: AGENDAMENTO -->
@@ -232,95 +231,110 @@
     const SUPABASE_KEY = 'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let activeMode = 'phone';
+    let currentMode = 'phone';
     let currentUser = null;
 
-    function formatPhoneInput(input) {
-      let v = input.value.replace(/\D/g, '');
+    function applyPhoneMask(el) {
+      let v = el.value.replace(/\D/g, '');
       if (v.length > 11) v = v.slice(0, 11);
-      if (v.length === 0) input.value = '';
-      else if (v.length <= 2) input.value = '(' + v;
-      else if (v.length <= 7) input.value = '(' + v.slice(0, 2) + ') ' + v.slice(2);
-      else input.value = '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
+      if (v.length === 0) el.value = '';
+      else if (v.length <= 2) el.value = '(' + v;
+      else if (v.length <= 7) el.value = '(' + v.slice(0, 2) + ') ' + v.slice(2);
+      else el.value = '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
     }
 
-    function formatCPFInput(input) {
-      let v = input.value.replace(/\D/g, '');
+    function applyCPFMask(el) {
+      let v = el.value.replace(/\D/g, '');
       if (v.length > 11) v = v.slice(0, 11);
-      if (v.length === 0) input.value = '';
-      else if (v.length <= 3) input.value = v;
-      else if (v.length <= 6) input.value = v.slice(0, 3) + '.' + v.slice(3);
-      else if (v.length <= 9) input.value = v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6);
-      else input.value = v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
+      if (v.length === 0) el.value = '';
+      else if (v.length <= 3) el.value = v;
+      else if (v.length <= 6) el.value = v.slice(0, 3) + '.' + v.slice(3);
+      else if (v.length <= 9) el.value = v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6);
+      else el.value = v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
     }
 
-    function applyInputMask(input) {
-      if (activeMode === 'phone') {
-        formatPhoneInput(input);
+    function maskActiveInput(el) {
+      if (currentMode === 'phone') {
+        applyPhoneMask(el);
       } else {
-        formatCPFInput(input);
+        applyCPFMask(el);
       }
     }
 
-    function setLoginMode(mode) {
-      activeMode = mode;
-      const input = document.getElementById('inputLoginValue');
-      const errBox = document.getElementById('loginErrorMsg');
+    function setMode(mode) {
+      currentMode = mode;
+      const inp = document.getElementById('inputLoginValue');
+      const err = document.getElementById('loginErrorMsg');
       
-      errBox.style.display = 'none';
-      input.value = '';
-      
+      err.style.display = 'none';
+      inp.value = '';
+
       if (mode === 'phone') {
         document.getElementById('tabPhone').className = 'btn-tab active';
         document.getElementById('tabCPF').className = 'btn-tab';
         document.getElementById('lblLoginType').innerText = 'Digite apenas os números do WhatsApp:';
-        input.placeholder = '(99) 99999-9999';
+        inp.placeholder = '(99) 99999-9999';
       } else {
         document.getElementById('tabPhone').className = 'btn-tab';
         document.getElementById('tabCPF').className = 'btn-tab active';
         document.getElementById('lblLoginType').innerText = 'Digite apenas os números do CPF:';
-        input.placeholder = '123.456.789-00';
+        inp.placeholder = '123.456.789-00';
       }
-      input.focus();
+      inp.focus();
     }
 
-    function goToRegister() {
+    function openRegisterView() {
       document.getElementById('loginView').style.display = 'none';
       document.getElementById('registerView').style.display = 'block';
     }
 
-    function goToLogin() {
+    function openLoginView() {
       document.getElementById('registerView').style.display = 'none';
       document.getElementById('loginView').style.display = 'block';
     }
 
-    async function doLogin() {
-      const inputVal = document.getElementById('inputLoginValue').value.trim();
-      const errBox = document.getElementById('loginErrorMsg');
-      errBox.style.display = 'none';
+    async function executeLogin() {
+      const inp = document.getElementById('inputLoginValue');
+      const rawVal = inp.value.trim();
+      const err = document.getElementById('loginErrorMsg');
+      err.style.display = 'none';
 
-      if (!inputVal) {
-        errBox.innerText = "Por favor, digite seu Telefone ou CPF para continuar.";
-        errBox.style.display = 'block';
+      if (!rawVal) {
+        err.innerText = "Por favor, digite seu Telefone ou CPF para continuar.";
+        err.style.display = 'block';
         return;
       }
 
+      const digitsOnly = rawVal.replace(/\D/g, '');
+
+      // Consulta no Supabase comparando o valor digitado formatado E o valor apenas numerico
       const { data, error } = await supabase
         .from('clientes_finais')
-        .select('*')
-        .or('telefone.eq.' + inputVal + ',cpf.eq.' + inputVal);
+        .select('*');
+
+      let foundClient = null;
 
       if (data && data.length > 0) {
-        const client = data[0];
-        currentUser = { name: client.nome, isVeteran: true, lastVisit: client.ultima_visita || '14/09/2026' };
+        foundClient = data.find(c => {
+          const cPhone = (c.telefone || '').replace(/\D/g, '');
+          const cCpf = (c.cpf || '').replace(/\D/g, '');
+          return (cPhone === digitsOnly && digitsOnly.length > 0) || 
+                 (cCpf === digitsOnly && digitsOnly.length > 0) ||
+                 (c.telefone === rawVal) || 
+                 (c.cpf === rawVal);
+        });
+      }
+
+      if (foundClient) {
+        currentUser = { name: foundClient.nome, isVeteran: true, lastVisit: foundClient.ultima_visita || '14/09/2026' };
         openBookingScreen();
       } else {
-        errBox.innerText = "Cliente não encontrado! Verifique os seus dados digitados.";
-        errBox.style.display = 'block';
+        err.innerText = "Cliente não encontrado! Verifique os seus dados digitados.";
+        err.style.display = 'block';
       }
     }
 
-    async function doRegister() {
+    async function executeRegister() {
       const name = document.getElementById('regName').value.trim();
       const phone = document.getElementById('regPhone').value.trim();
       const cpf = document.getElementById('regCPF').value.trim();
