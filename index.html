@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Agendamento Online - Marcaz / Jhovis Tecnologia</title>
+  <!-- SUPABASE SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -134,30 +135,30 @@
       </div>
     </div>
 
-    <!-- TELA 1: LOGIN OU CADASTRO -->
+    <!-- PAINEL PRINCIPAL DE AUTENTICAÇÃO -->
     <div id="authScreen" class="auth-container">
       
-      <!-- LOGIN VIEW -->
-      <div id="loginView">
+      <!-- TELA DE LOGIN -->
+      <div id="loginView" style="display: block;">
         <div class="auth-title">Acesse sua Conta</div>
         <div class="auth-desc">Informe seu Telefone ou CPF para entrar na agenda.</div>
 
         <div class="auth-tabs">
-          <button type="button" class="btn-tab active" id="tabPhone" onclick="setMode('phone')">📱 Por Telefone</button>
-          <button type="button" class="btn-tab" id="tabCPF" onclick="setMode('cpf')">🪪 Por CPF</button>
+          <button type="button" class="btn-tab active" id="tabPhone">📱 Por Telefone</button>
+          <button type="button" class="btn-tab" id="tabCPF">🪪 Por CPF</button>
         </div>
 
         <div id="loginErrorMsg" class="error-msg"></div>
 
         <span class="input-label" id="lblLoginType">Digite apenas os números do WhatsApp:</span>
-        <input type="text" id="inputLoginValue" class="input-box" placeholder="(99) 99999-9999" oninput="maskActiveInput(this)">
+        <input type="text" id="inputLoginValue" class="input-box" placeholder="(99) 99999-9999">
         
-        <button type="button" class="btn-login" onclick="executeLogin()">Entrar na Agenda</button>
+        <button type="button" class="btn-login" id="btnLogin">Entrar na Agenda</button>
         <br>
-        <button type="button" class="btn-register-link" onclick="openRegisterView()">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
+        <button type="button" class="btn-register-link" id="btnGoRegister">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
       </div>
 
-      <!-- REGISTER VIEW -->
+      <!-- TELA DE CADASTRO -->
       <div id="registerView" style="display: none;">
         <div class="auth-title">Novo Cadastro</div>
         <div class="auth-desc">Preencha seus dados para realizar agendamentos.</div>
@@ -166,19 +167,19 @@
         <input type="text" id="regName" class="input-box" placeholder="Digite seu nome completo">
 
         <span class="input-label">Seu WhatsApp:</span>
-        <input type="text" id="regPhone" class="input-box" placeholder="(99) 99999-9999" oninput="applyPhoneMask(this)">
+        <input type="text" id="regPhone" class="input-box" placeholder="(99) 99999-9999">
 
         <span class="input-label">Seu CPF:</span>
-        <input type="text" id="regCPF" class="input-box" placeholder="123.456.789-00" oninput="applyCPFMask(this)">
+        <input type="text" id="regCPF" class="input-box" placeholder="123.456.789-00">
 
-        <button type="button" class="btn-login" onclick="executeRegister()">Finalizar Cadastro e Acessar</button>
+        <button type="button" class="btn-login" id="btnDoRegister">Finalizar Cadastro e Acessar</button>
         <br>
-        <button type="button" class="btn-register-link" onclick="openLoginView()">Já tenho cadastro? Voltar ao Login</button>
+        <button type="button" class="btn-register-link" id="btnGoLogin">Já tenho cadastro? Voltar ao Login</button>
       </div>
 
     </div>
 
-    <!-- TELA 2: AGENDAMENTO -->
+    <!-- TELA DE AGENDAMENTO -->
     <div id="bookingScreen" style="display: none;">
       <div class="welcome-banner" id="welcomeBanner"></div>
 
@@ -227,135 +228,188 @@
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://joadjyqxvpfhgnihezyp.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // INICIALIZAÇÃO DE VARIÁVEIS LOCAIS
+    var mode = 'phone';
+    var currentUser = null;
+    var supabaseClient = null;
 
-    let currentMode = 'phone';
-    let currentUser = null;
-
-    function applyPhoneMask(el) {
-      let v = el.value.replace(/\D/g, '');
-      if (v.length > 11) v = v.slice(0, 11);
-      if (v.length === 0) el.value = '';
-      else if (v.length <= 2) el.value = '(' + v;
-      else if (v.length <= 7) el.value = '(' + v.slice(0, 2) + ') ' + v.slice(2);
-      else el.value = '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
-    }
-
-    function applyCPFMask(el) {
-      let v = el.value.replace(/\D/g, '');
-      if (v.length > 11) v = v.slice(0, 11);
-      if (v.length === 0) el.value = '';
-      else if (v.length <= 3) el.value = v;
-      else if (v.length <= 6) el.value = v.slice(0, 3) + '.' + v.slice(3);
-      else if (v.length <= 9) el.value = v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6);
-      else el.value = v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
-    }
-
-    function maskActiveInput(el) {
-      if (currentMode === 'phone') {
-        applyPhoneMask(el);
-      } else {
-        applyCPFMask(el);
+    // INICIALIZA O SUPABASE DE FORMA PROTEGIDA
+    try {
+      if (window.supabase) {
+        supabaseClient = window.supabase.createClient(
+          'https://joadjyqxvpfhgnihezyp.supabase.co',
+          'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys'
+        );
       }
+    } catch(e) {
+      console.log('Supabase Init Info:', e);
     }
 
-    function setMode(mode) {
-      currentMode = mode;
-      const inp = document.getElementById('inputLoginValue');
-      const err = document.getElementById('loginErrorMsg');
+    // MÁSCARAS
+    function formatPhone(v) {
+      v = v.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length === 0) return '';
+      if (v.length <= 2) return '(' + v;
+      if (v.length <= 7) return '(' + v.slice(0, 2) + ') ' + v.slice(2);
+      return '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
+    }
+
+    function formatCPF(v) {
+      v = v.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length === 0) return '';
+      if (v.length <= 3) return v;
+      if (v.length <= 6) return v.slice(0, 3) + '.' + v.slice(3);
+      if (v.length <= 9) return v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6);
+      return v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
+    }
+
+    // EVENT LISTENERS NATIVOS QUANDO O DOM ESTIVER PRONTO
+    document.addEventListener('DOMContentLoaded', function() {
       
-      err.style.display = 'none';
-      inp.value = '';
+      var tabPhone = document.getElementById('tabPhone');
+      var tabCPF = document.getElementById('tabCPF');
+      var inpLogin = document.getElementById('inputLoginValue');
+      var lblLogin = document.getElementById('lblLoginType');
+      var errBox = document.getElementById('loginErrorMsg');
+      
+      var btnGoRegister = document.getElementById('btnGoRegister');
+      var btnGoLogin = document.getElementById('btnGoLogin');
+      var loginView = document.getElementById('loginView');
+      var registerView = document.getElementById('registerView');
 
-      if (mode === 'phone') {
-        document.getElementById('tabPhone').className = 'btn-tab active';
-        document.getElementById('tabCPF').className = 'btn-tab';
-        document.getElementById('lblLoginType').innerText = 'Digite apenas os números do WhatsApp:';
-        inp.placeholder = '(99) 99999-9999';
-      } else {
-        document.getElementById('tabPhone').className = 'btn-tab';
-        document.getElementById('tabCPF').className = 'btn-tab active';
-        document.getElementById('lblLoginType').innerText = 'Digite apenas os números do CPF:';
-        inp.placeholder = '123.456.789-00';
-      }
-      inp.focus();
-    }
+      var regPhone = document.getElementById('regPhone');
+      var regCPF = document.getElementById('regCPF');
 
-    function openRegisterView() {
-      document.getElementById('loginView').style.display = 'none';
-      document.getElementById('registerView').style.display = 'block';
-    }
-
-    function openLoginView() {
-      document.getElementById('registerView').style.display = 'none';
-      document.getElementById('loginView').style.display = 'block';
-    }
-
-    async function executeLogin() {
-      const inp = document.getElementById('inputLoginValue');
-      const rawVal = inp.value.trim();
-      const err = document.getElementById('loginErrorMsg');
-      err.style.display = 'none';
-
-      if (!rawVal) {
-        err.innerText = "Por favor, digite seu Telefone ou CPF para continuar.";
-        err.style.display = 'block';
-        return;
+      // ALTERNÂNCIA DE ABAS (TELEFONE / CPF)
+      if(tabPhone) {
+        tabPhone.onclick = function() {
+          mode = 'phone';
+          tabPhone.className = 'btn-tab active';
+          tabCPF.className = 'btn-tab';
+          lblLogin.innerText = 'Digite apenas os números do WhatsApp:';
+          inpLogin.placeholder = '(99) 99999-9999';
+          inpLogin.value = '';
+          errBox.style.display = 'none';
+        };
       }
 
-      const digitsOnly = rawVal.replace(/\D/g, '');
-
-      const { data, error } = await supabase
-        .from('clientes_finais')
-        .select('*');
-
-      let foundClient = null;
-
-      if (data && data.length > 0) {
-        foundClient = data.find(c => {
-          const cPhone = (c.telefone || '').replace(/\D/g, '');
-          const cCpf = (c.cpf || '').replace(/\D/g, '');
-          return (cPhone === digitsOnly && digitsOnly.length > 0) || 
-                 (cCpf === digitsOnly && digitsOnly.length > 0) ||
-                 (c.telefone === rawVal) || 
-                 (c.cpf === rawVal);
-        });
+      if(tabCPF) {
+        tabCPF.onclick = function() {
+          mode = 'cpf';
+          tabCPF.className = 'btn-tab active';
+          tabPhone.className = 'btn-tab';
+          lblLogin.innerText = 'Digite apenas os números do CPF:';
+          inpLogin.placeholder = '123.456.789-00';
+          inpLogin.value = '';
+          errBox.style.display = 'none';
+        };
       }
 
-      if (foundClient) {
-        currentUser = { name: foundClient.nome, isVeteran: true, lastVisit: foundClient.ultima_visita || '14/09/2026' };
-        openBookingScreen();
-      } else {
-        err.innerText = "Cliente não encontrado! Verifique os seus dados digitados.";
-        err.style.display = 'block';
-      }
-    }
-
-    async function executeRegister() {
-      const name = document.getElementById('regName').value.trim();
-      const phone = document.getElementById('regPhone').value.trim();
-      const cpf = document.getElementById('regCPF').value.trim();
-
-      if (!name || !phone || !cpf) {
-        alert('Preencha Nome, Telefone e CPF para realizar seu cadastro.');
-        return;
+      // MÁSCARA NO INPUT DE LOGIN
+      if(inpLogin) {
+        inpLogin.oninput = function() {
+          if (mode === 'phone') {
+            inpLogin.value = formatPhone(inpLogin.value);
+          } else {
+            inpLogin.value = formatCPF(inpLogin.value);
+          }
+        };
       }
 
-      await supabase
-        .from('clientes_finais')
-        .insert([{ nome: name, telefone: phone, cpf: cpf }]);
+      // MÁSCARAS NO CADASTRO
+      if(regPhone) regPhone.oninput = function() { regPhone.value = formatPhone(regPhone.value); };
+      if(regCPF) regCPF.oninput = function() { regCPF.value = formatCPF(regCPF.value); };
 
-      currentUser = { name: name, isVeteran: false, lastVisit: null };
-      openBookingScreen();
-    }
+      // NAVEGAÇÃO ENTRE LOGIN E REGISTRO
+      if(btnGoRegister) {
+        btnGoRegister.onclick = function() {
+          loginView.style.display = 'none';
+          registerView.style.display = 'block';
+        };
+      }
 
-    function openBookingScreen() {
+      if(btnGoLogin) {
+        btnGoLogin.onclick = function() {
+          registerView.style.display = 'none';
+          loginView.style.display = 'block';
+        };
+      }
+
+      // AÇÃO DE LOGIN
+      var btnLogin = document.getElementById('btnLogin');
+      if(btnLogin) {
+        btnLogin.onclick = async function() {
+          var val = inpLogin.value.trim();
+          errBox.style.display = 'none';
+
+          if (!val) {
+            errBox.innerText = "Por favor, digite seu Telefone ou CPF para continuar.";
+            errBox.style.display = 'block';
+            return;
+          }
+
+          var digits = val.replace(/\D/g, '');
+          var found = false;
+
+          if (supabaseClient) {
+            try {
+              var res = await supabaseClient.from('clientes_finais').select('*');
+              if (res.data && res.data.length > 0) {
+                var match = res.data.find(function(c) {
+                  var pNum = (c.telefone || '').replace(/\D/g, '');
+                  var cNum = (c.cpf || '').replace(/\D/g, '');
+                  return (digits.length > 0 && (pNum === digits || cNum === digits)) || (c.telefone === val || c.cpf === val);
+                });
+
+                if (match) {
+                  found = true;
+                  currentUser = { name: match.nome, isVeteran: true, lastVisit: match.ultima_visita || '14/09/2026' };
+                  openBooking();
+                }
+              }
+            } catch(e) {
+              console.log('Erro ao buscar cliente:', e);
+            }
+          }
+
+          if (!found) {
+            errBox.innerText = "Cliente não encontrado! Verifique os seus dados digitados.";
+            errBox.style.display = 'block';
+          }
+        };
+      }
+
+      // AÇÃO DE CADASTRO
+      var btnDoRegister = document.getElementById('btnDoRegister');
+      if(btnDoRegister) {
+        btnDoRegister.onclick = async function() {
+          var name = document.getElementById('regName').value.trim();
+          var phone = document.getElementById('regPhone').value.trim();
+          var cpf = document.getElementById('regCPF').value.trim();
+
+          if (!name || !phone || !cpf) {
+            alert('Preencha Nome, Telefone e CPF para realizar seu cadastro.');
+            return;
+          }
+
+          if (supabaseClient) {
+            await supabaseClient.from('clientes_finais').insert([{ nome: name, telefone: phone, cpf: cpf }]);
+          }
+
+          currentUser = { name: name, isVeteran: false, lastVisit: null };
+          openBooking();
+        };
+      }
+
+    });
+
+    function openBooking() {
       document.getElementById('authScreen').style.display = 'none';
       document.getElementById('bookingScreen').style.display = 'block';
 
-      const banner = document.getElementById('welcomeBanner');
+      var banner = document.getElementById('welcomeBanner');
       if (currentUser.isVeteran && currentUser.lastVisit) {
         banner.innerHTML = '👋 Estamos felizes <strong>' + currentUser.name + '</strong>, de você ter voltado!<br>Sua última visita conosco foi no dia <strong>' + currentUser.lastVisit + '</strong>!';
       } else {
@@ -366,22 +420,22 @@
       updateTotals();
     }
 
-    let currentDate = 'Hoje, Sab';
-    let currentPro = 'Sena';
-    let currentTime = '10:30';
-    let selectedServices = [{ name: 'Corte / Cabelo', duration: 45, price: 50 }];
-    const allTimes = ['09:00', '10:30', '11:00', '11:20', '14:00', '15:30'];
+    var currentDate = 'Hoje, Sab';
+    var currentPro = 'Sena';
+    var currentTime = '10:30';
+    var selectedServices = [{ name: 'Corte / Cabelo', duration: 45, price: 50 }];
+    var allTimes = ['09:00', '10:30', '11:00', '11:20', '14:00', '15:30'];
 
     function toggleService(element, duration, price, name) {
-      const index = selectedServices.findIndex(s => s.name === name);
-      const checkbox = element.querySelector('.service-checkbox');
+      var index = selectedServices.findIndex(function(s) { return s.name === name; });
+      var checkbox = element.querySelector('.service-checkbox');
       if (index > -1) {
         if (selectedServices.length === 1) return alert('Selecione ao menos um serviço.');
         selectedServices.splice(index, 1);
         element.classList.remove('selected');
         checkbox.innerText = '';
       } else {
-        selectedServices.push({ name, duration, price });
+        selectedServices.push({ name: name, duration: duration, price: price });
         element.classList.add('selected');
         checkbox.innerText = '✓';
       }
@@ -390,22 +444,22 @@
     }
 
     function updateTotals() {
-      const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+      var totalPrice = selectedServices.reduce(function(sum, s) { return sum + s.price; }, 0);
+      var totalDuration = selectedServices.reduce(function(sum, s) { return sum + s.duration; }, 0);
       document.getElementById('btnConfirm').innerText = 'Confirmar Agendamento (R$ ' + totalPrice + ',00 | ⏱️ ' + totalDuration + ' min)';
     }
 
     function renderTimes() {
-      const timeGrid = document.getElementById('timeGrid');
+      var timeGrid = document.getElementById('timeGrid');
       timeGrid.innerHTML = '';
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+      var totalDuration = selectedServices.reduce(function(sum, s) { return sum + s.duration; }, 0);
 
-      allTimes.forEach(time => {
-        const chip = document.createElement('div');
+      allTimes.forEach(function(time) {
+        var chip = document.createElement('div');
         chip.className = 'time-chip';
         chip.innerText = time;
 
-        let blocked = false;
+        var blocked = false;
         if (currentPro === 'Sena' && time === '11:00' && currentDate === 'Hoje, Sab') blocked = true;
         if (currentPro === 'Sena' && time === '11:00' && totalDuration > 40 && currentDate === 'Hoje, Sab') blocked = true;
 
@@ -414,39 +468,39 @@
           chip.title = 'Horário Ocupado';
         } else {
           if (time === currentTime) chip.classList.add('selected');
-          chip.onclick = () => selectTime(chip, time);
+          chip.onclick = function() { selectTime(chip, time); };
         }
         timeGrid.appendChild(chip);
       });
     }
 
     function selectDate(e, d) {
-      document.querySelectorAll('.date-card').forEach(c => c.classList.remove('selected'));
+      document.querySelectorAll('.date-card').forEach(function(c) { c.classList.remove('selected'); });
       e.classList.add('selected'); currentDate = d; renderTimes();
     }
     function selectPro(e, p) {
-      document.querySelectorAll('.pro-card').forEach(c => c.classList.remove('selected'));
+      document.querySelectorAll('.pro-card').forEach(function(c) { c.classList.remove('selected'); });
       e.classList.add('selected'); currentPro = p; renderTimes();
     }
     function selectTime(e, t) {
-      document.querySelectorAll('.time-chip').forEach(c => c.classList.remove('selected'));
+      document.querySelectorAll('.time-chip').forEach(function(c) { c.classList.remove('selected'); });
       e.classList.add('selected'); currentTime = t;
     }
 
     async function confirmBooking() {
-      const totalDur = selectedServices.reduce((sum, s) => sum + s.duration, 0);
-      const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
-      const serviceNames = selectedServices.map(s => s.name).join(', ');
+      var totalDur = selectedServices.reduce(function(sum, s) { return sum + s.duration; }, 0);
+      var totalPrice = selectedServices.reduce(function(sum, s) { return sum + s.price; }, 0);
+      var serviceNames = selectedServices.map(function(s) { return s.name; }).join(', ');
 
-      await supabase
-        .from('agendamentos')
-        .insert([{
+      if(supabaseClient) {
+        await supabaseClient.from('agendamentos').insert([{
           servicos_nomes: serviceNames,
           duracao_total_min: totalDur,
           valor_total: totalPrice,
           data_agendamento: '2026-09-28',
           hora_agendamento: currentTime
         }]);
+      }
 
       alert('🎉 AGENDAMENTO CONFIRMADO E SALVO EM NUVEM!\n\nCliente: ' + currentUser.name + '\nData: ' + currentDate + ' às ' + currentTime + '\nDuração Total: ' + totalDur + ' min\nProfissional: ' + currentPro + '\n\n⚠️ Lembre-se: Chegue 10 min antes. Tolerância de apenas 5 min!');
     }
