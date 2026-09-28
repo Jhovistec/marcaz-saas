@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marcaz Control - Jhovis Tecnologia</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-primary: #070709;
+      --bg-card: #121318;
+      --primary: #00e5ff;
+      --accent: #ff3b30;
+      --border-color: #1e2029;
+      --text-main: #ffffff;
+      --text-muted: #8e8ea0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg-primary); color: var(--text-main); padding: 20px; }
+
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 15px; margin-bottom: 20px; }
+    .brand-title { font-size: 1.3rem; font-weight: bold; color: var(--primary); }
+
+    .grid-control { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px; }
+    .card-control { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
+    .card-control h2 { font-size: 1rem; color: var(--primary); margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+
+    select, input, button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #070709; color: #fff; margin-bottom: 12px; font-size: 0.85rem; }
+    button.btn-primary { background: var(--primary); color: #000; font-weight: bold; cursor: pointer; border: none; }
+    button.btn-danger { background: var(--accent); color: #fff; font-weight: bold; cursor: pointer; border: none; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+    th, td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
+    th { color: var(--text-muted); }
+
+    .role-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: rgba(0,229,255,0.1); color: var(--primary); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <div class="brand-title">Marcaz Control - Gestão Central</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Painel do Proprietário - Jhovis Tecnologia</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-primary" onclick="window.location.href='index.html'" style="width:auto; margin:0;">👁️ Modo Apresentação</button>
+    </div>
+  </header>
+
+  <!-- 1. SELEÇÃO DE CLIENTE / EMPRESÁRIO -->
+  <div class="card-control" style="margin-bottom: 20px;">
+    <h2>🏢 Selecionar Cliente (Empresário)</h2>
+    <select id="clientSelect" onchange="loadClientData(this.value)">
+      <option value="1">Barbearia VIP - Várzea da Palma (Status: Ativo)</option>
+      <option value="2">Salão Beleza Real - Belo Horizonte (Status: Ativo)</option>
+      <option value="3">Estética & Spa Bella - Uberlândia (Status: Bloqueado)</option>
+    </select>
+  </div>
+
+  <!-- 2. METRICAS FINANCEIRAS DO CLIENTE SELECIONADO -->
+  <div class="grid-control">
+    <div class="card-control">
+      <h2>💰 Faturamento do Cliente</h2>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Diário, Semanal e Mensal</p>
+      <div style="font-size:1.2rem; font-weight:bold; color:var(--primary); margin-bottom:5px;" id="fatHoje">Hoje: R$ 890,00</div>
+      <div style="font-size:1.2rem; font-weight:bold; color:var(--primary); margin-bottom:5px;" id="fatSemana">Semanal: R$ 4.350,00</div>
+      <div style="font-size:1.2rem; font-weight:bold; color:var(--primary);" id="fatMes">Mensal: R$ 18.290,00</div>
+    </div>
+
+    <div class="card-control">
+      <h2>🔒 Controle de Licença</h2>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Status do Cliente no Sistema</p>
+      <button class="btn-danger" id="btnToggleLic" onclick="toggleLicence()">🔒 Bloquear Acesso por Inadimplência</button>
+      <button class="btn-primary" onclick="alert('✅ Licença renovada por mais 30 dias!')">💳 Confirmar Pagamento Mensal</button>
+    </div>
+
+    <div class="card-control">
+      <h2>💾 Gestão de Backups</h2>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Rotina Automática: Diária às 23:59</p>
+      <button class="btn-primary" onclick="alert('📦 Backup completo gerado com sucesso!')">⬇️ Fazer Backup Agora</button>
+      <button style="background:#222530; color:#fff; border:none; cursor:pointer;" onclick="alert('📂 Selecione o arquivo de backup para restaurar.')">📂 Restaurar Backup</button>
+    </div>
+  </div>
+
+  <!-- 3. GESTÃO DA SUA EQUIPE E CARGOS -->
+  <div class="card-control">
+    <h2>👥 Usuários do Sistema Marcaz Control (Sua Equipe)</h2>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:15px;">
+      <input type="text" placeholder="Nome do Funcionário">
+      <input type="email" placeholder="E-mail">
+      <select>
+        <option value="Master">Cargo: Master</option>
+        <option value="Gerente">Cargo: Gerente</option>
+        <option value="Operador">Cargo: Operador</option>
+      </select>
+      <button class="btn-primary" onclick="alert('👤 Usuário cadastrado com sucesso!')">Adicionar Usuário</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Nome</th><th>E-mail</th><th>Cargo</th><th>Ações</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Jonathan Sena</td><td>jonathan@jhovis.com.br</td><td><span class="role-badge">Master</span></td><td>Acesso Total</td></tr>
+        <tr><td>Carlos Suporte</td><td>carlos@jhovis.com.br</td><td><span class="role-badge" style="color:#ffcc00;">Gerente</span></td><td>Editar / Bloquear</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let isBlocked = false;
+
+    function toggleLicence() {
+      isBlocked = !isBlocked;
+      const btn = document.getElementById('btnToggleLic');
+      if(isBlocked) {
+        btn.innerText = '🔓 Reativar Acesso do Cliente';
+        btn.style.background = '#2ea44f';
+        alert('🚨 Acesso do cliente bloqueado temporariamente por inadimplência.');
+      } else {
+        btn.innerText = '🔒 Bloquear Acesso por Inadimplência';
+        btn.style.background = '#ff3b30';
+        alert('✅ Acesso do cliente reativado com sucesso!');
+      }
+    }
+
+    function loadClientData(clientId) {
+      if(clientId === '3') {
+        document.getElementById('fatHoje').innerText = 'Hoje: R$ 0,00';
+        document.getElementById('fatSemana').innerText = 'Semanal: R$ 0,00';
+        document.getElementById('fatMes').innerText = 'Mensal: R$ 0,00';
+      } else {
+        document.getElementById('fatHoje').innerText = 'Hoje: R$ 890,00';
+        document.getElementById('fatSemana').innerText = 'Semanal: R$ 4.350,00';
+        document.getElementById('fatMes').innerText = 'Mensal: R$ 18.290,00';
+      }
+    }
+  </script>
+</body>
+</html>

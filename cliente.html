@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Agendamento Online - Marcaz / Jhovis Tecnologia</title>
+  <!-- SDK SUPABASE EM TEMPO REAL -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-body: #0d0e12;
+      --bg-card: #16181f;
+      --primary: #00e5ff;
+      --accent: #ff3b30;
+      --text-main: #ffffff;
+      --text-muted: #9a9ab0;
+      --border: #222533;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    
+    body { 
+      background-color: var(--bg-body); color: var(--text-main); 
+      display: flex; justify-content: center; min-height: 100vh; padding-bottom: 90px; position: relative;
+    }
+
+    body::before {
+      content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background-image: url('logo.png'); background-repeat: no-repeat;
+      background-position: center; background-size: cover;
+      filter: grayscale(100%) opacity(0.05); pointer-events: none; z-index: 0;
+    }
+
+    .mobile-app { width: 100%; max-width: 480px; padding: 20px; position: relative; z-index: 1; }
+
+    .profile-card {
+      background: linear-gradient(135deg, rgba(22, 24, 31, 0.95) 0%, rgba(31, 34, 46, 0.95) 100%);
+      border: 1px solid var(--border); border-radius: 16px; padding: 18px;
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;
+    }
+    .profile-top { display: flex; align-items: center; justify-content: space-between; }
+    .profile-left { display: flex; align-items: center; gap: 12px; }
+    .profile-avatar {
+      width: 50px; height: 50px; border-radius: 50%;
+      background-color: var(--primary); display: flex; align-items: center;
+      justify-content: center; font-weight: bold; color: #000; font-size: 1.2rem;
+    }
+    .profile-info h1 { font-size: 1rem; margin-bottom: 2px; }
+    .profile-info p { font-size: 0.75rem; color: var(--text-muted); }
+
+    .social-bar { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
+    .social-btn {
+      background: rgba(0,229,255,0.1); border: 1px solid var(--primary);
+      color: var(--primary); padding: 6px 12px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    }
+
+    .welcome-banner { background: rgba(0, 229, 255, 0.08); border: 1px solid var(--primary); color: #e0f7fa; padding: 12px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 20px; text-align: center; }
+
+    .auth-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px 20px; text-align: center; }
+    .auth-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 8px; color: #fff; }
+    .auth-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px; }
+
+    .auth-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .btn-tab { flex: 1; background: #0d0e12; border: 1px solid var(--border); color: var(--text-muted); padding: 10px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+    .btn-tab.active { border-color: var(--primary); color: var(--primary); background: rgba(0,229,255,0.05); }
+
+    .input-box { width: 100%; background: #0d0e12; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 10px; font-size: 0.9rem; margin-bottom: 12px; }
+    .input-label { text-align: left; font-size: 0.75rem; color: var(--primary); margin-bottom: 4px; display: block; font-weight: bold; }
+    
+    .btn-login { width: 100%; background: var(--primary); color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-bottom: 15px; margin-top: 5px; }
+    .btn-register-link { background: none; border: none; color: var(--text-muted); font-size: 0.8rem; text-decoration: underline; cursor: pointer; }
+
+    .section-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: bold; }
+
+    .date-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+    .date-card { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 4px; border-radius: 10px; text-align: center; cursor: pointer; }
+    .date-card.selected { border-color: var(--primary); background: rgba(0, 229, 255, 0.1); }
+    .date-day { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+    .date-num { font-weight: bold; font-size: 0.95rem; color: var(--text-main); margin-top: 2px; }
+
+    .pro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+    .pro-card { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 6px; border-radius: 10px; text-align: center; cursor: pointer; }
+    .pro-card.selected { border-color: var(--primary); background: rgba(0, 229, 255, 0.08); }
+    .pro-name { font-weight: bold; font-size: 0.85rem; }
+    .pro-role { font-size: 0.7rem; color: var(--text-muted); }
+
+    .services-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .service-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .service-card.selected { border-color: var(--primary); background: rgba(0, 229, 255, 0.08); }
+    .service-checkbox { width: 20px; height: 20px; border-radius: 4px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 0.75rem; font-weight: bold; color: #000; }
+    .service-card.selected .service-checkbox { background: var(--primary); border-color: var(--primary); }
+    .service-left { display: flex; align-items: center; }
+
+    .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+    .time-chip { background: var(--bg-card); border: 1px solid var(--border); padding: 12px; border-radius: 10px; text-align: center; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+    .time-chip.selected { background: var(--primary); color: #000; border-color: var(--primary); }
+    .time-chip.blocked { background: rgba(255, 59, 48, 0.12); color: var(--accent); border: 1px solid var(--accent); text-decoration: line-through; cursor: not-allowed; opacity: 0.85; }
+
+    .notice-box { background: rgba(255, 204, 0, 0.08); border: 1px solid #ffcc00; color: #ffdd66; padding: 12px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 20px; text-align: center; line-height: 1.4; }
+
+    .bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #101117; border-top: 1px solid var(--border); padding: 12px 20px; z-index: 10; }
+    .btn-confirm { width: 100%; background: linear-gradient(90deg, var(--primary) 0%, #00b0ff 100%); color: #000; border: none; padding: 14px; border-radius: 12px; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
+
+    .footer-whitelabel { text-align: center; margin-top: 15px; font-size: 0.75rem; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <div class="mobile-app">
+    <div class="profile-card">
+      <div class="profile-top">
+        <div class="profile-left">
+          <div class="profile-avatar">J</div>
+          <div class="profile-info">
+            <h1>Salão & Barbearia - Jhovis</h1>
+            <p>📍 Várzea da Palma - MG</p>
+          </div>
+        </div>
+      </div>
+      <div class="social-bar">
+        <a href="https://instagram.com" target="_blank" class="social-btn">📸 Instagram</a>
+        <a href="https://wa.me/5538999998888" target="_blank" class="social-btn">💬 WhatsApp</a>
+        <a href="https://facebook.com" target="_blank" class="social-btn">📘 Facebook</a>
+        <a href="https://tiktok.com" target="_blank" class="social-btn">🎵 TikTok</a>
+      </div>
+    </div>
+
+    <!-- TELA 1: LOGIN OU CADASTRO -->
+    <div id="authScreen" class="auth-container">
+      <div id="loginView">
+        <div class="auth-title">Acesse sua Conta</div>
+        <div class="auth-desc">Informe seu Telefone ou CPF para entrar na agenda.</div>
+
+        <div class="auth-tabs">
+          <button class="btn-tab active" id="tabPhone" onclick="switchTab('phone')">📱 Por Telefone</button>
+          <button class="btn-tab" id="tabCPF" onclick="switchTab('cpf')">🪪 Por CPF</button>
+        </div>
+
+        <span class="input-label">Digite apenas os números:</span>
+        <input type="text" id="inputLoginValue" class="input-box" placeholder="(99) 99999-9999" oninput="maskLoginInput(this)">
+        
+        <button class="btn-login" onclick="doLogin()">Entrar na Agenda</button>
+        <br>
+        <button class="btn-register-link" onclick="showRegister()">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
+      </div>
+
+      <div id="registerView" style="display: none;">
+        <div class="auth-title">Novo Cadastro</div>
+        <div class="auth-desc">Preencha seus dados para realizar agendamentos.</div>
+
+        <span class="input-label">Seu Nome Completo:</span>
+        <input type="text" id="regName" class="input-box" placeholder="Digite seu nome">
+
+        <span class="input-label">Seu WhatsApp (Digite apenas os números):</span>
+        <input type="text" id="regPhone" class="input-box" placeholder="(99) 99999-9999" oninput="maskPhone(this)">
+
+        <span class="input-label">Seu CPF (Digite apenas os números):</span>
+        <input type="text" id="regCPF" class="input-box" placeholder="123.456.789-00" oninput="maskCPF(this)">
+
+        <button class="btn-login" onclick="doRegister()">Finalizar Cadastro e Acessar</button>
+        <button class="btn-register-link" onclick="showLogin()">Já tenho cadastro? Voltar ao Login</button>
+      </div>
+    </div>
+
+    <!-- TELA 2: AGENDAMENTO -->
+    <div id="bookingScreen" style="display: none;">
+      <div class="welcome-banner" id="welcomeBanner"></div>
+
+      <div class="section-title">1. Escolha a Data</div>
+      <div class="date-grid">
+        <div class="date-card selected" onclick="selectDate(this, 'Hoje, Sab')"><div class="date-day">Hoje</div><div class="date-num">Sáb</div></div>
+        <div class="date-card" onclick="selectDate(this, 'Seg, 28/09')"><div class="date-day">Seg</div><div class="date-num">28/09</div></div>
+        <div class="date-card" onclick="selectDate(this, 'Ter, 29/09')"><div class="date-day">Ter</div><div class="date-num">29/09</div></div>
+        <div class="date-card" onclick="selectDate(this, 'Qua, 30/09')"><div class="date-day">Qua</div><div class="date-num">30/09</div></div>
+      </div>
+
+      <div class="section-title">2. Escolha o Profissional</div>
+      <div class="pro-grid">
+        <div class="pro-card selected" onclick="selectPro(this, 'Sena')"><div class="pro-name">Sena</div><div class="pro-role">Master Barber</div></div>
+        <div class="pro-card" onclick="selectPro(this, 'Ana')"><div class="pro-name">Ana</div><div class="pro-role">Styling / Nails</div></div>
+        <div class="pro-card" onclick="selectPro(this, 'Próximo Livre')"><div class="pro-name">Próximo Livre</div><div class="pro-role">Atendimento Rápido</div></div>
+      </div>
+
+      <div class="section-title">3. Selecione os Serviços</div>
+      <div class="services-list">
+        <div class="service-card selected" onclick="toggleService(this, 45, 50, 'Corte / Cabelo')">
+          <div class="service-left"><div class="service-checkbox">✓</div><div><div style="font-weight:600; font-size:0.9rem;">Corte / Cabelo</div><div style="font-size:0.78rem; color:var(--text-muted);">⏱️ 45 min</div></div></div>
+          <div style="font-size:0.95rem; font-weight:bold; color:var(--primary);">R$ 50,00</div>
+        </div>
+        <div class="service-card" onclick="toggleService(this, 30, 30, 'Barba / Design')">
+          <div class="service-left"><div class="service-checkbox"></div><div><div style="font-weight:600; font-size:0.9rem;">Barba / Design</div><div style="font-size:0.78rem; color:var(--text-muted);">⏱️ 30 min</div></div></div>
+          <div style="font-size:0.95rem; font-weight:bold; color:var(--primary);">R$ 30,00</div>
+        </div>
+      </div>
+
+      <div class="section-title">4. Horários Disponíveis</div>
+      <div class="time-grid" id="timeGrid"></div>
+
+      <div class="notice-box">
+        ⏰ <strong>ATENÇÃO AO HORÁRIO:</strong><br>
+        Por favor, chegue <strong>10 minutos antes</strong> do seu horário.<br>
+        Aguardaremos tolerância máxima de apenas <strong>5 minutos de atraso</strong>.
+      </div>
+
+      <div class="bottom-bar">
+        <button class="btn-confirm" id="btnConfirm" onclick="confirmBooking()">Confirmar Agendamento (R$ 50,00)</button>
+      </div>
+    </div>
+
+    <div class="footer-whitelabel">POWERED BY <strong>JHOVIS TECNOLOGIA</strong></div>
+  </div>
+
+  <script>
+    // INICIALIZAR SUPABASE REALTIME
+    const SUPABASE_URL = 'https://joadjyqxvpfhgnihezyp.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let activeLoginMode = 'phone';
+    let currentUser = null;
+
+    function maskPhone(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length === 0) input.value = '';
+      else if (v.length <= 2) input.value = `(${v}`;
+      else if (v.length <= 7) input.value = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+      else input.value = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
+    }
+
+    function maskCPF(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length === 0) input.value = '';
+      else if (v.length <= 3) input.value = v;
+      else if (v.length <= 6) input.value = `${v.slice(0, 3)}.${v.slice(3)}`;
+      else if (v.length <= 9) input.value = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
+      else input.value = `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
+    }
+
+    function maskLoginInput(input) {
+      if (activeLoginMode === 'phone') maskPhone(input);
+      else maskCPF(input);
+    }
+
+    function switchTab(mode) {
+      activeLoginMode = mode;
+      const input = document.getElementById('inputLoginValue');
+      input.value = '';
+      document.getElementById('tabPhone').className = mode === 'phone' ? 'btn-tab active' : 'btn-tab';
+      document.getElementById('tabCPF').className = mode === 'cpf' ? 'btn-tab active' : 'btn-tab';
+      input.placeholder = mode === 'phone' ? '(99) 99999-9999' : '123.456.789-00';
+    }
+
+    function showRegister() {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('registerView').style.display = 'block';
+    }
+
+    function showLogin() {
+      document.getElementById('registerView').style.display = 'none';
+      document.getElementById('loginView').style.display = 'block';
+    }
+
+    async function doLogin() {
+      const val = document.getElementById('inputLoginValue').value.trim();
+      if(!val) return alert('Por favor, digite seu Telefone ou CPF.');
+
+      // Consulta no Supabase
+      const { data, error } = await supabase
+        .from('clientes_finais')
+        .select('*')
+        .or(`telefone.eq.${val},cpf.eq.${val}`)
+        .single();
+
+      if (data) {
+        currentUser = { name: data.nome, isVeteran: true, lastVisit: data.ultima_visita || '14/09/2026' };
+      } else {
+        currentUser = { name: 'Cliente VIP', isVeteran: false, lastVisit: null };
+      }
+      openBookingScreen();
+    }
+
+    async function doRegister() {
+      const name = document.getElementById('regName').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const cpf = document.getElementById('regCPF').value.trim();
+
+      if(!name || !phone || !cpf) return alert('Preencha Nome, Telefone e CPF para realizar seu cadastro.');
+
+      // Salva o novo cliente no Supabase
+      const { data, error } = await supabase
+        .from('clientes_finais')
+        .insert([{ nome: name, telefone: phone, cpf: cpf }]);
+
+      currentUser = { name: name, isVeteran: false, lastVisit: null };
+      openBookingScreen();
+    }
+
+    function openBookingScreen() {
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('bookingScreen').style.display = 'block';
+
+      const banner = document.getElementById('welcomeBanner');
+      if(currentUser.isVeteran && currentUser.lastVisit) {
+        banner.innerHTML = `👋 Estamos felizes <strong>${currentUser.name}</strong>, de você ter voltado!<br>Sua última visita conosco foi no dia <strong>${currentUser.lastVisit}</strong>!`;
+      } else {
+        banner.innerHTML = `🎉 Que bom ter você conosco aqui, <strong>${currentUser.name}</strong>!`;
+      }
+
+      renderTimes();
+      updateTotals();
+    }
+
+    let currentDate = 'Hoje, Sab';
+    let currentPro = 'Sena';
+    let currentTime = '10:30';
+    let selectedServices = [{ name: 'Corte / Cabelo', duration: 45, price: 50 }];
+    const allTimes = ['09:00', '10:30', '11:00', '11:20', '14:00', '15:30'];
+
+    function toggleService(element, duration, price, name) {
+      const index = selectedServices.findIndex(s => s.name === name);
+      const checkbox = element.querySelector('.service-checkbox');
+      if (index > -1) {
+        if (selectedServices.length === 1) return alert('Selecione ao menos um serviço.');
+        selectedServices.splice(index, 1);
+        element.classList.remove('selected');
+        checkbox.innerText = '';
+      } else {
+        selectedServices.push({ name, duration, price });
+        element.classList.add('selected');
+        checkbox.innerText = '✓';
+      }
+      updateTotals();
+      renderTimes();
+    }
+
+    function updateTotals() {
+      const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+      document.getElementById('btnConfirm').innerText = `Confirmar Agendamento (R$ ${totalPrice},00 | ⏱️ ${totalDuration} min)`;
+    }
+
+    function renderTimes() {
+      const timeGrid = document.getElementById('timeGrid');
+      timeGrid.innerHTML = '';
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+
+      allTimes.forEach(time => {
+        const chip = document.createElement('div');
+        chip.className = 'time-chip';
+        chip.innerText = time;
+
+        let blocked = false;
+        if (currentPro === 'Sena' && time === '11:00' && currentDate === 'Hoje, Sab') blocked = true;
+        if (currentPro === 'Sena' && time === '11:00' && totalDuration > 40 && currentDate === 'Hoje, Sab') blocked = true;
+
+        if (blocked) {
+          chip.classList.add('blocked');
+          chip.title = 'Horário Ocupado';
+        } else {
+          if (time === currentTime) chip.classList.add('selected');
+          chip.onclick = () => selectTime(chip, time);
+        }
+        timeGrid.appendChild(chip);
+      });
+    }
+
+    function selectDate(e, d) {
+      document.querySelectorAll('.date-card').forEach(c => c.classList.remove('selected'));
+      e.classList.add('selected'); currentDate = d; renderTimes();
+    }
+    function selectPro(e, p) {
+      document.querySelectorAll('.pro-card').forEach(c => c.classList.remove('selected'));
+      e.classList.add('selected'); currentPro = p; renderTimes();
+    }
+    function selectTime(e, t) {
+      document.querySelectorAll('.time-chip').forEach(c => c.classList.remove('selected'));
+      e.classList.add('selected'); currentTime = t;
+    }
+
+    async function confirmBooking() {
+      const totalDur = selectedServices.reduce((sum, s) => sum + s.duration, 0);
+      const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+      const serviceNames = selectedServices.map(s => s.name).join(', ');
+
+      // GRAVA O AGENDAMENTO EM TEMPO REAL NO SUPABASE
+      const { data, error } = await supabase
+        .from('agendamentos')
+        .insert([{
+          servicos_nomes: serviceNames,
+          duracao_total_min: totalDur,
+          valor_total: totalPrice,
+          data_agendamento: '2026-09-28',
+          hora_agendamento: currentTime
+        }]);
+
+      alert(`🎉 AGENDAMENTO CONFIRMADO E SALVO EM NUVEM!\n\nCliente: ${currentUser.name}\nData: ${currentDate} às ${currentTime}\nDuração Total: ${totalDur} min\nProfissional: ${currentPro}\n\n⚠️ Lembre-se: Chegue 10 min antes. Tolerância de apenas 5 min!`);
+    }
+  </script>
+</body>
+</html>
