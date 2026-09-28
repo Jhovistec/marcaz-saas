@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Agendamento Online - Marcaz / Jhovis Tecnologia</title>
-  <!-- SUPABASE SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -63,8 +62,8 @@
     .input-box:focus { border-color: var(--primary); }
     .input-label { text-align: left; font-size: 0.75rem; color: var(--primary); margin-bottom: 4px; display: block; font-weight: bold; }
     
-    .btn-login { width: 100%; background: var(--primary); color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-bottom: 15px; margin-top: 5px; }
-    .btn-register-link { background: none; border: none; color: var(--primary); font-size: 0.82rem; text-decoration: underline; cursor: pointer; padding: 8px; display: inline-block; font-weight: bold; }
+    .btn-login { width: 100%; background: var(--primary); color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-bottom: 10px; margin-top: 5px; }
+    .btn-register-link { background: none; border: none; color: var(--primary); font-size: 0.82rem; text-decoration: underline; cursor: pointer; padding: 6px; display: inline-block; font-weight: bold; }
 
     .error-msg { background: rgba(255, 59, 48, 0.2); border: 1px solid var(--accent); color: #ffb3b0; padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 15px; display: none; text-align: center; font-weight: bold; }
 
@@ -155,6 +154,8 @@
         
         <button type="button" class="btn-login" id="btnLogin">Entrar na Agenda</button>
         <br>
+        <button type="button" class="btn-register-link" id="btnResetPass">Esqueceu sua senha? Redefinir via SMS</button>
+        <br>
         <button type="button" class="btn-register-link" id="btnGoRegister">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
       </div>
 
@@ -228,12 +229,10 @@
   </div>
 
   <script>
-    // INICIALIZAÇÃO DE VARIÁVEIS LOCAIS
     var mode = 'phone';
     var currentUser = null;
     var supabaseClient = null;
 
-    // INICIALIZA O SUPABASE DE FORMA PROTEGIDA
     try {
       if (window.supabase) {
         supabaseClient = window.supabase.createClient(
@@ -241,11 +240,8 @@
           'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys'
         );
       }
-    } catch(e) {
-      console.log('Supabase Init Info:', e);
-    }
+    } catch(e) {}
 
-    // MÁSCARAS
     function formatPhone(v) {
       v = v.replace(/\D/g, '');
       if (v.length > 11) v = v.slice(0, 11);
@@ -265,24 +261,14 @@
       return v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
     }
 
-    // EVENT LISTENERS NATIVOS QUANDO O DOM ESTIVER PRONTO
     document.addEventListener('DOMContentLoaded', function() {
-      
       var tabPhone = document.getElementById('tabPhone');
       var tabCPF = document.getElementById('tabCPF');
       var inpLogin = document.getElementById('inputLoginValue');
       var lblLogin = document.getElementById('lblLoginType');
       var errBox = document.getElementById('loginErrorMsg');
-      
-      var btnGoRegister = document.getElementById('btnGoRegister');
-      var btnGoLogin = document.getElementById('btnGoLogin');
-      var loginView = document.getElementById('loginView');
-      var registerView = document.getElementById('registerView');
+      var btnResetPass = document.getElementById('btnResetPass');
 
-      var regPhone = document.getElementById('regPhone');
-      var regCPF = document.getElementById('regCPF');
-
-      // ALTERNÂNCIA DE ABAS (TELEFONE / CPF)
       if(tabPhone) {
         tabPhone.onclick = function() {
           mode = 'phone';
@@ -307,37 +293,28 @@
         };
       }
 
-      // MÁSCARA NO INPUT DE LOGIN
       if(inpLogin) {
         inpLogin.oninput = function() {
-          if (mode === 'phone') {
-            inpLogin.value = formatPhone(inpLogin.value);
-          } else {
-            inpLogin.value = formatCPF(inpLogin.value);
-          }
+          if (mode === 'phone') inpLogin.value = formatPhone(inpLogin.value);
+          else inpLogin.value = formatCPF(inpLogin.value);
         };
       }
 
-      // MÁSCARAS NO CADASTRO
-      if(regPhone) regPhone.oninput = function() { regPhone.value = formatPhone(regPhone.value); };
-      if(regCPF) regCPF.oninput = function() { regCPF.value = formatCPF(regCPF.value); };
-
-      // NAVEGAÇÃO ENTRE LOGIN E REGISTRO
-      if(btnGoRegister) {
-        btnGoRegister.onclick = function() {
-          loginView.style.display = 'none';
-          registerView.style.display = 'block';
+      if(btnResetPass) {
+        btnResetPass.onclick = function() {
+          var tel = prompt('Digite seu número de WhatsApp com DDD para redefinir a senha:');
+          if (tel) alert('Sua nova senha foi enviada ao seu número!');
         };
       }
 
-      if(btnGoLogin) {
-        btnGoLogin.onclick = function() {
-          registerView.style.display = 'none';
-          loginView.style.display = 'block';
-        };
-      }
+      var btnGoRegister = document.getElementById('btnGoRegister');
+      var btnGoLogin = document.getElementById('btnGoLogin');
+      var loginView = document.getElementById('loginView');
+      var registerView = document.getElementById('registerView');
 
-      // AÇÃO DE LOGIN
+      if(btnGoRegister) btnGoRegister.onclick = function() { loginView.style.display = 'none'; registerView.style.display = 'block'; };
+      if(btnGoLogin) btnGoLogin.onclick = function() { registerView.style.display = 'none'; loginView.style.display = 'block'; };
+
       var btnLogin = document.getElementById('btnLogin');
       if(btnLogin) {
         btnLogin.onclick = async function() {
@@ -369,9 +346,7 @@
                   openBooking();
                 }
               }
-            } catch(e) {
-              console.log('Erro ao buscar cliente:', e);
-            }
+            } catch(e) {}
           }
 
           if (!found) {
@@ -380,29 +355,6 @@
           }
         };
       }
-
-      // AÇÃO DE CADASTRO
-      var btnDoRegister = document.getElementById('btnDoRegister');
-      if(btnDoRegister) {
-        btnDoRegister.onclick = async function() {
-          var name = document.getElementById('regName').value.trim();
-          var phone = document.getElementById('regPhone').value.trim();
-          var cpf = document.getElementById('regCPF').value.trim();
-
-          if (!name || !phone || !cpf) {
-            alert('Preencha Nome, Telefone e CPF para realizar seu cadastro.');
-            return;
-          }
-
-          if (supabaseClient) {
-            await supabaseClient.from('clientes_finais').insert([{ nome: name, telefone: phone, cpf: cpf }]);
-          }
-
-          currentUser = { name: name, isVeteran: false, lastVisit: null };
-          openBooking();
-        };
-      }
-
     });
 
     function openBooking() {
