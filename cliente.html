@@ -25,6 +25,13 @@
 
     .mobile-app { width: 100%; max-width: 480px; padding: 20px; position: relative; z-index: 1; }
 
+    /* SELETOR DE EMPRESA NO TOPO */
+    .company-selector-bar {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .company-selector-bar label { font-size: 0.75rem; color: var(--primary); font-weight: bold; }
+    .company-selector-bar select { background: #0d0e12; border: 1px solid var(--border); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; }
+
     .profile-card {
       background: linear-gradient(135deg, rgba(22, 24, 31, 0.95) 0%, rgba(31, 34, 46, 0.95) 100%);
       border: 1px solid var(--border); border-radius: 16px; padding: 18px;
@@ -46,7 +53,6 @@
       color: #fff; padding: 6px 12px; border-radius: 20px;
       font-size: 0.75rem; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
     }
-    .social-icon { width: 14px; height: 14px; fill: currentColor; }
 
     .welcome-banner { background: rgba(0, 229, 255, 0.08); border: 1px solid var(--primary); color: #e0f7fa; padding: 12px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 20px; text-align: center; }
 
@@ -104,40 +110,38 @@
 <body>
 
   <div class="mobile-app">
+    
+    <!-- BARRA DE SELEÇÃO DE ESTABELECIMENTO -->
+    <div class="company-selector-bar">
+      <label>Unidade / Estabelecimento:</label>
+      <select id="selCompanyUnit" onchange="changeCompanyUnit(this.value)">
+        <option value="barbearia_vip">Barbearia VIP - Várzea da Palma</option>
+        <option value="barbearia_noel">Barbearia Noel (Demonstração)</option>
+        <option value="salao_divas">Salão Divas (Demonstração)</option>
+        <option value="studio_plena">Studio Plena (Demonstração)</option>
+      </select>
+    </div>
+
     <div class="profile-card">
       <div class="profile-top">
         <div class="profile-left">
-          <div class="profile-avatar">J</div>
+          <div class="profile-avatar" id="appAvatar">J</div>
           <div class="profile-info">
-            <h1>Salão & Barbearia - Jhovis</h1>
-            <p>📍 Várzea da Palma - MG</p>
+            <h1 id="appTitle">Salão & Barbearia - Jhovis</h1>
+            <p id="appCity">📍 Várzea da Palma - MG</p>
           </div>
         </div>
       </div>
       <div class="social-bar">
-        <a href="https://instagram.com" target="_blank" class="social-btn">
-          <svg class="social-icon" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-          Instagram
-        </a>
-        <a href="https://wa.me/5538999998888" target="_blank" class="social-btn">
-          <svg class="social-icon" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
-          WhatsApp
-        </a>
-        <a href="https://facebook.com" target="_blank" class="social-btn">
-          <svg class="social-icon" viewBox="0 0 24 24"><path d="M9 8H6v4h3v12h5V12h3.642L18 8h-4V6.333C14 5.374 14.5 5 15.5 5H18V0h-3.808C10.592 0 9 1.847 9 5.052V8z"/></svg>
-          Facebook
-        </a>
-        <a href="https://tiktok.com" target="_blank" class="social-btn">
-          <svg class="social-icon" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.82.56-1.31 1.52-1.33 2.52-.02.99.4 1.97 1.14 2.59.88.73 2.11.9 3.17.49 1.01-.38 1.76-1.34 1.88-2.42.06-1.89.02-3.79.03-5.68V.02z"/></svg>
-          TikTok
-        </a>
+        <a href="https://instagram.com" target="_blank" class="social-btn">Instagram</a>
+        <a href="https://wa.me/5538999998888" target="_blank" class="social-btn">WhatsApp</a>
+        <a href="https://facebook.com" target="_blank" class="social-btn">Facebook</a>
       </div>
     </div>
 
     <!-- PAINEL PRINCIPAL DE AUTENTICAÇÃO -->
     <div id="authScreen" class="auth-container">
       
-      <!-- TELA DE LOGIN -->
       <div id="loginView" style="display: block;">
         <div class="auth-title">Acesse sua Conta</div>
         <div class="auth-desc">Informe seu Telefone ou CPF para entrar na agenda.</div>
@@ -159,7 +163,6 @@
         <button type="button" class="btn-register-link" id="btnGoRegister">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
       </div>
 
-      <!-- TELA DE CADASTRO -->
       <div id="registerView" style="display: none;">
         <div class="auth-title">Novo Cadastro</div>
         <div class="auth-desc">Preencha seus dados para realizar agendamentos.</div>
@@ -242,6 +245,22 @@
       }
     } catch(e) {}
 
+    function changeCompanyUnit(val) {
+      var t = document.getElementById('appTitle');
+      var c = document.getElementById('appCity');
+      var a = document.getElementById('appAvatar');
+
+      if (val === 'barbearia_noel') {
+        t.innerText = 'Barbearia Noel'; c.innerText = '📍 Belo Horizonte - MG'; a.innerText = 'N';
+      } else if (val === 'salao_divas') {
+        t.innerText = 'Salão Divas'; c.innerText = '📍 Montes Claros - MG'; a.innerText = 'D';
+      } else if (val === 'studio_plena') {
+        t.innerText = 'Studio Plena'; c.innerText = '📍 Uberlândia - MG'; a.innerText = 'P';
+      } else {
+        t.innerText = 'Salão & Barbearia - Jhovis'; c.innerText = '📍 Várzea da Palma - MG'; a.innerText = 'J';
+      }
+    }
+
     function formatPhone(v) {
       v = v.replace(/\D/g, '');
       if (v.length > 11) v = v.slice(0, 11);
@@ -302,7 +321,7 @@
 
       if(btnResetPass) {
         btnResetPass.onclick = function() {
-          var tel = prompt('Digite seu número de WhatsApp com DDD para redefinir a senha:');
+          var tel = prompt('Digite seu número de WhatsApp para redefinir a senha:');
           if (tel) alert('Sua nova senha foi enviada ao seu número!');
         };
       }
