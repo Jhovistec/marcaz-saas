@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Agendamento Online - Marcaz / Jhovis Tecnologia</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
+  <style id="dynamicTheme">
     :root {
       --bg-body: #0d0e12;
       --bg-card: #16181f;
       --primary: #00e5ff;
       --accent: #ff3b30;
+      --success: #34c759;
       --text-main: #ffffff;
       --text-muted: #9a9ab0;
       --border: #222533;
@@ -28,16 +29,17 @@
     .profile-card {
       background: linear-gradient(135deg, rgba(22, 24, 31, 0.95) 0%, rgba(31, 34, 46, 0.95) 100%);
       border: 1px solid var(--border); border-radius: 16px; padding: 18px;
-      display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; text-align: left;
     }
     .profile-top { display: flex; align-items: center; justify-content: space-between; }
     .profile-left { display: flex; align-items: center; gap: 12px; }
     .profile-avatar {
-      width: 50px; height: 50px; border-radius: 50%;
+      width: 55px; height: 55px; border-radius: 50%;
       background-color: var(--primary); display: flex; align-items: center;
-      justify-content: center; font-weight: bold; color: #000; font-size: 1.2rem;
+      justify-content: center; font-weight: bold; color: #000; font-size: 1.3rem;
+      background-size: cover; background-position: center;
     }
-    .profile-info h1 { font-size: 1rem; margin-bottom: 2px; }
+    .profile-info h1 { font-size: 1.05rem; margin-bottom: 2px; }
     .profile-info p { font-size: 0.75rem; color: var(--text-muted); }
 
     .social-bar { display: flex; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
@@ -47,7 +49,10 @@
       font-size: 0.75rem; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
     }
 
-    .welcome-banner { background: rgba(0, 229, 255, 0.08); border: 1px solid var(--primary); color: #e0f7fa; padding: 12px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 20px; text-align: center; }
+    .welcome-banner { background: rgba(0, 229, 255, 0.08); border: 1px solid var(--primary); color: #e0f7fa; padding: 12px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 15px; text-align: center; }
+
+    .my-bookings-container { background: #12141d; border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 20px; }
+    .booking-item-card { background: #181b26; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; }
 
     .auth-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px 20px; text-align: center; }
     .auth-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 8px; color: #fff; }
@@ -66,7 +71,7 @@
 
     .error-msg { background: rgba(255, 59, 48, 0.2); border: 1px solid var(--accent); color: #ffb3b0; padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 15px; display: none; text-align: center; font-weight: bold; }
 
-    .section-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: bold; }
+    .section-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: bold; text-align: left; }
 
     .date-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
     .date-card { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 4px; border-radius: 10px; text-align: center; cursor: pointer; }
@@ -87,15 +92,20 @@
     .service-card.selected .service-checkbox { background: var(--primary); border-color: var(--primary); }
     .service-left { display: flex; align-items: center; }
 
+    .price-old { text-decoration: line-through; color: var(--text-muted); font-size: 0.78rem; margin-right: 4px; }
+    .price-promo { color: var(--primary); font-weight: bold; font-size: 0.95rem; }
+
     .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
     .time-chip { background: var(--bg-card); border: 1px solid var(--border); padding: 12px; border-radius: 10px; text-align: center; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
     .time-chip.selected { background: var(--primary); color: #000; border-color: var(--primary); }
-    .time-chip.blocked { background: rgba(255, 59, 48, 0.12); color: var(--accent); border: 1px solid var(--accent); text-decoration: line-through; cursor: not-allowed; opacity: 0.85; }
 
     .notice-box { background: rgba(255, 204, 0, 0.08); border: 1px solid #ffcc00; color: #ffdd66; padding: 12px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 20px; text-align: center; line-height: 1.4; }
 
     .bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #101117; border-top: 1px solid var(--border); padding: 12px 20px; z-index: 10; }
     .btn-confirm { width: 100%; background: linear-gradient(90deg, var(--primary) 0%, #00b0ff 100%); color: #000; border: none; padding: 14px; border-radius: 12px; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
+
+    .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); display:none; justify-content:center; align-items:center; z-index:99; }
+    .modal-content { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px; width: 90%; max-width: 400px; text-align: center; }
 
     .footer-whitelabel { text-align: center; margin-top: 15px; font-size: 0.75rem; color: var(--text-muted); }
   </style>
@@ -104,14 +114,14 @@
 
   <div class="mobile-app">
 
-    <div class="profile-card">
+    <div class="profile-card" id="profileHeader">
       <div class="profile-top">
         <div class="profile-left">
           <div class="profile-avatar" id="appAvatar">J</div>
           <div class="profile-info">
             <h1 id="appTitle">Salão & Barbearia - Jhovis</h1>
             <p id="appCity">📍 Várzea da Palma - MG</p>
-            <p style="font-size: 0.7rem; color: var(--primary); margin-top: 3px;">⏰ Horário de funcionamento: 08:00 às 19:00</p>
+            <p style="font-size: 0.7rem; color: var(--primary); margin-top: 3px;" id="appHours">⏰ Horário de funcionamento: 08:00 às 19:00</p>
           </div>
         </div>
       </div>
@@ -122,6 +132,7 @@
       </div>
     </div>
 
+    <!-- TELA DE AUTENTICAÇÃO -->
     <div id="authScreen" class="auth-container">
       
       <div id="loginView" style="display: block;">
@@ -167,33 +178,34 @@
 
     </div>
 
+    <!-- TELA DE AGENDAMENTO -->
     <div id="bookingScreen" style="display: none;">
       <div class="welcome-banner" id="welcomeBanner"></div>
 
-      <div class="section-title">1. Escolha a Data</div>
-      <div class="date-grid">
-        <div class="date-card selected" onclick="selectDate(this, 'Hoje, Sab')"><div class="date-day">Hoje</div><div class="date-num">Sáb</div></div>
-        <div class="date-card" onclick="selectDate(this, 'Seg, 28/09')"><div class="date-day">Seg</div><div class="date-num">28/09</div></div>
-        <div class="date-card" onclick="selectDate(this, 'Ter, 29/09')"><div class="date-day">Ter</div><div class="date-num">29/09</div></div>
-        <div class="date-card" onclick="selectDate(this, 'Qua, 30/09')"><div class="date-day">Qua</div><div class="date-num">30/09</div></div>
+      <!-- SEÇÃO MEUS AGENDAMENTOS ATIVOS -->
+      <div class="my-bookings-container">
+        <div class="section-title" style="margin-bottom:5px; color:var(--primary);">📋 Meus Agendamentos Ativos</div>
+        <div id="myBookingsList"><span style="font-size:0.78rem; color:var(--text-muted);">Nenhum agendamento pendente.</span></div>
       </div>
 
+      <div class="section-title">1. Escolha a Data</div>
+      <div class="date-grid" id="dateGrid"></div>
+
       <div class="section-title">2. Escolha o Profissional</div>
-      <div class="pro-grid">
+      <div class="pro-grid" id="proGrid">
         <div class="pro-card selected" onclick="selectPro(this, 'Sena')"><div class="pro-name">Sena</div><div class="pro-role">Master Barber</div></div>
         <div class="pro-card" onclick="selectPro(this, 'Ana')"><div class="pro-name">Ana</div><div class="pro-role">Styling / Nails</div></div>
-        <div class="pro-card" onclick="selectPro(this, 'Próximo Livre')"><div class="pro-name">Próximo Livre</div><div class="pro-role">Atendimento Rápido</div></div>
       </div>
 
       <div class="section-title">3. Selecione os Serviços</div>
-      <div class="services-list">
-        <div class="service-card selected" onclick="toggleService(this, 45, 50, 'Corte / Cabelo')">
+      <div class="services-list" id="servicesList">
+        <div class="service-card selected" onclick="toggleService(this, 45, 40, 'Corte / Cabelo')">
           <div class="service-left"><div class="service-checkbox">✓</div><div><div style="font-weight:600; font-size:0.9rem;">Corte / Cabelo</div><div style="font-size:0.78rem; color:var(--text-muted);">⏱️ 45 min</div></div></div>
-          <div style="font-size:0.95rem; font-weight:bold; color:var(--primary);">R$ 50,00</div>
+          <div><span class="price-old">R$ 50,00</span><span class="price-promo">R$ 40,00</span></div>
         </div>
         <div class="service-card" onclick="toggleService(this, 30, 30, 'Barba / Design')">
           <div class="service-left"><div class="service-checkbox"></div><div><div style="font-weight:600; font-size:0.9rem;">Barba / Design</div><div style="font-size:0.78rem; color:var(--text-muted);">⏱️ 30 min</div></div></div>
-          <div style="font-size:0.95rem; font-weight:bold; color:var(--primary);">R$ 30,00</div>
+          <div><span class="price-promo">R$ 30,00</span></div>
         </div>
       </div>
 
@@ -207,26 +219,49 @@
       </div>
 
       <div class="bottom-bar">
-        <button type="button" class="btn-confirm" id="btnConfirm" onclick="confirmBooking()">Confirmar Agendamento (R$ 50,00)</button>
+        <button type="button" class="btn-confirm" id="btnConfirm" onclick="handleBookingAttempt()">Confirmar Agendamento (R$ 40,00)</button>
       </div>
+    </div>
+
+    <!-- TELA DE ENCERRAMENTO (TELA LIMPA COM LOGO E BOTÕES) -->
+    <div id="finalScreen" style="display: none; text-align: center; padding-top: 20px;">
+      <div style="width: 110px; height: 110px; border-radius: 50%; background: var(--primary); color: #000; font-size: 2.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;" id="finalLogo">J</div>
+      <h2 style="font-size: 1.3rem; margin-bottom: 6px;" id="finalTitle">Salão & Barbearia - Jhovis</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted);" id="finalCity">📍 Várzea da Palma - MG</p>
+      <p style="font-size: 0.8rem; color: var(--primary); margin-top: 4px; margin-bottom: 25px;" id="finalHours">⏰ Horário: 08:00 às 19:00</p>
+
+      <div class="social-bar" style="justify-content: center; margin-bottom: 30px;">
+        <a href="https://instagram.com" target="_blank" class="social-btn">Instagram</a>
+        <a href="https://wa.me/5538999998888" target="_blank" class="social-btn">WhatsApp</a>
+        <a href="https://facebook.com" target="_blank" class="social-btn">Facebook</a>
+      </div>
+
+      <button class="btn-login" onclick="restartBookingFlow()" style="margin-bottom: 12px;">Desejo fazer um novo agendamento</button>
+      <button class="btn-login" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--border);" onclick="logoutUser()">Encerrar</button>
     </div>
 
     <div class="footer-whitelabel">POWERED BY <strong>JHOVIS TECNOLOGIA</strong></div>
   </div>
 
+  <!-- MODAL DE AGENDAMENTO DUPLO -->
+  <div class="modal-overlay" id="modalDoubleBooking">
+    <div class="modal-content">
+      <h3 style="font-size: 1.05rem; margin-bottom: 12px; color: #fff;">⚠️ Agendamento Já Existente</h3>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 20px;">Você já tem um serviço agendado conosco. Deseja agendar mais um horário?</p>
+      <button class="btn-login" onclick="executeBookingConfirmation()">Sim, desejo agendar mais um</button>
+      <button class="btn-login" style="background: rgba(255,59,48,0.2); color: #ffb3b0; border: 1px solid var(--accent); margin-top: 8px;" onclick="closeDoubleModal()">Opa, não vi o agendamento, cancelar este!</button>
+    </div>
+  </div>
+
   <script>
     var mode = 'phone';
     var currentUser = null;
-    var supabaseClient = null;
-
-    try {
-      if (window.supabase) {
-        supabaseClient = window.supabase.createClient(
-          'https://joadjyqxvpfhgnihezyp.supabase.co',
-          'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys'
-        );
-      }
-    } catch(e) {}
+    var userBookings = [];
+    var currentDate = '';
+    var currentPro = 'Sena';
+    var currentTime = '10:30';
+    var selectedServices = [{ name: 'Corte / Cabelo', duration: 45, price: 40 }];
+    var allTimes = ['09:00', '10:30', '11:00', '11:20', '14:00', '15:30'];
 
     function formatPhone(v) {
       v = v.replace(/\D/g, '');
@@ -247,129 +282,52 @@
       return v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
     }
 
+    function generateDynamicDates() {
+      var dateGrid = document.getElementById('dateGrid');
+      dateGrid.innerHTML = '';
+      var today = new Date();
+      var daysWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+      for (var i = 0; i < 4; i++) {
+        var d = new Date();
+        d.setDate(today.getDate() + i);
+        var dayName = i === 0 ? 'Hoje' : daysWeek[d.getDay()];
+        var dayNum = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+        var fullDateStr = dayName + ', ' + dayNum;
+
+        if (i === 0) currentDate = fullDateStr;
+
+        var card = document.createElement('div');
+        card.className = i === 0 ? 'date-card selected' : 'date-card';
+        card.onclick = (function(el, str) {
+          return function() { selectDate(el, str); };
+        })(card, fullDateStr);
+
+        card.innerHTML = '<div class="date-day">' + dayName + '</div><div class="date-num">' + dayNum + '</div>';
+        dateGrid.appendChild(card);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
-      var tabPhone = document.getElementById('tabPhone');
-      var tabCPF = document.getElementById('tabCPF');
-      var inpLogin = document.getElementById('inputLoginValue');
-      var lblLogin = document.getElementById('lblLoginType');
-      var errBox = document.getElementById('loginErrorMsg');
-      var regErrBox = document.getElementById('regErrorMsg');
-      var btnResetPass = document.getElementById('btnResetPass');
+      generateDynamicDates();
 
-      if(tabPhone) {
-        tabPhone.onclick = function() {
-          mode = 'phone';
-          tabPhone.className = 'btn-tab active';
-          tabCPF.className = 'btn-tab';
-          lblLogin.innerText = 'Digite apenas os números do WhatsApp:';
-          inpLogin.placeholder = '(99) 99999-9999';
-          inpLogin.value = '';
-          errBox.style.display = 'none';
-        };
-      }
-
-      if(tabCPF) {
-        tabCPF.onclick = function() {
-          mode = 'cpf';
-          tabCPF.className = 'btn-tab active';
-          tabPhone.className = 'btn-tab';
-          lblLogin.innerText = 'Digite apenas os números do CPF:';
-          inpLogin.placeholder = '123.456.789-00';
-          inpLogin.value = '';
-          errBox.style.display = 'none';
-        };
-      }
-
-      if(inpLogin) {
-        inpLogin.oninput = function() {
-          if (mode === 'phone') inpLogin.value = formatPhone(inpLogin.value);
-          else inpLogin.value = formatCPF(inpLogin.value);
-        };
-      }
-
-      if(btnResetPass) {
-        btnResetPass.onclick = function() {
-          var tel = prompt('Digite seu número de WhatsApp para redefinir a senha:');
-          if (tel) alert('Sua nova senha foi enviada ao seu número!');
-        };
-      }
-
-      var btnGoRegister = document.getElementById('btnGoRegister');
-      var btnGoLogin = document.getElementById('btnGoLogin');
-      var loginView = document.getElementById('loginView');
-      var registerView = document.getElementById('registerView');
-
-      if(btnGoRegister) btnGoRegister.onclick = function() { loginView.style.display = 'none'; registerView.style.display = 'block'; };
-      if(btnGoLogin) btnGoLogin.onclick = function() { registerView.style.display = 'none'; loginView.style.display = 'block'; };
-
-      var btnDoRegister = document.getElementById('btnDoRegister');
-      if(btnDoRegister) {
-        btnDoRegister.onclick = async function() {
-          var name = document.getElementById('regName').value.trim();
-          var phone = document.getElementById('regPhone').value.trim();
-          var cpf = document.getElementById('regCPF').value.trim();
-
-          regErrBox.style.display = 'none';
-
-          if (!name || !phone || !cpf) {
-            regErrBox.innerText = "Preencha Nome, WhatsApp e CPF para concluir o cadastro.";
-            regErrBox.style.display = 'block';
-            return;
-          }
-
-          if (supabaseClient) {
-            try {
-              await supabaseClient.from('clientes_finais').insert([{
-                nome: name,
-                telefone: phone,
-                cpf: cpf
-              }]);
-            } catch(e) {}
-          }
-
-          currentUser = { name: name, isVeteran: false };
+      var btnLogin = document.getElementById('btnLogin');
+      if (btnLogin) {
+        btnLogin.onclick = function() {
+          var val = document.getElementById('inputLoginValue').value.trim();
+          if (!val) return alert('Digite seu Telefone ou CPF.');
+          currentUser = { name: 'Jonathan', isVeteran: true, lastVisit: '20/09/2026' };
           openBooking();
         };
       }
 
-      var btnLogin = document.getElementById('btnLogin');
-      if(btnLogin) {
-        btnLogin.onclick = async function() {
-          var val = inpLogin.value.trim();
-          errBox.style.display = 'none';
-
-          if (!val) {
-            errBox.innerText = "Por favor, digite seu Telefone ou CPF para continuar.";
-            errBox.style.display = 'block';
-            return;
-          }
-
-          var digits = val.replace(/\D/g, '');
-          var found = false;
-
-          if (supabaseClient) {
-            try {
-              var res = await supabaseClient.from('clientes_finais').select('*');
-              if (res.data && res.data.length > 0) {
-                var match = res.data.find(function(c) {
-                  var pNum = (c.telefone || '').replace(/\D/g, '');
-                  var cNum = (c.cpf || '').replace(/\D/g, '');
-                  return (digits.length > 0 && (pNum === digits || cNum === digits)) || (c.telefone === val || c.cpf === val);
-                });
-
-                if (match) {
-                  found = true;
-                  currentUser = { name: match.nome, isVeteran: true, lastVisit: match.ultima_visita || '14/09/2026' };
-                  openBooking();
-                }
-              }
-            } catch(e) {}
-          }
-
-          if (!found) {
-            errBox.innerText = "Cliente não encontrado! Verifique os seus dados digitados.";
-            errBox.style.display = 'block';
-          }
+      var btnDoRegister = document.getElementById('btnDoRegister');
+      if (btnDoRegister) {
+        btnDoRegister.onclick = function() {
+          var n = document.getElementById('regName').value.trim();
+          if (!n) return alert('Preencha seu Nome Completo.');
+          currentUser = { name: n, isVeteran: false };
+          openBooking();
         };
       }
     });
@@ -379,21 +337,83 @@
       document.getElementById('bookingScreen').style.display = 'block';
 
       var banner = document.getElementById('welcomeBanner');
-      if (currentUser.isVeteran && currentUser.lastVisit) {
-        banner.innerHTML = '👋 Estamos felizes <strong>' + currentUser.name + '</strong>, de você ter voltado!<br>Sua última visita conosco foi no dia <strong>' + currentUser.lastVisit + '</strong>!';
-      } else {
-        banner.innerHTML = '🎉 Que bom ter você conosco aqui, <strong>' + currentUser.name + '</strong>!';
-      }
+      banner.innerHTML = '🎉 Que bom ter você conosco aqui, <strong>' + currentUser.name + '</strong>!';
 
+      renderMyBookings();
       renderTimes();
       updateTotals();
     }
 
-    var currentDate = 'Hoje, Sab';
-    var currentPro = 'Sena';
-    var currentTime = '10:30';
-    var selectedServices = [{ name: 'Corte / Cabelo', duration: 45, price: 50 }];
-    var allTimes = ['09:00', '10:30', '11:00', '11:20', '14:00', '15:30'];
+    function renderMyBookings() {
+      var container = document.getElementById('myBookingsList');
+      if (userBookings.length === 0) {
+        container.innerHTML = '<span style="font-size:0.78rem; color:var(--text-muted);">Nenhum agendamento pendente.</span>';
+        return;
+      }
+      container.innerHTML = '';
+      userBookings.forEach(function(b, index) {
+        var div = document.createElement('div');
+        div.className = 'booking-item-card';
+        div.innerHTML = '<div><strong style="font-size:0.82rem;">' + b.service + '</strong><div style="font-size:0.75rem; color:var(--text-muted);">' + b.date + ' às ' + b.time + ' (' + b.pro + ')</div></div><button style="background:rgba(255,59,48,0.2); color:#ffb3b0; border:1px solid var(--accent); padding:4px 8px; border-radius:6px; font-size:0.72rem; font-weight:bold; cursor:pointer;" onclick="cancelBooking(' + index + ')">Cancelar</button>';
+        container.appendChild(div);
+      });
+    }
+
+    function cancelBooking(index) {
+      userBookings.splice(index, 1);
+      renderMyBookings();
+      alert('Agendamento cancelado com sucesso!');
+    }
+
+    function handleBookingAttempt() {
+      if (userBookings.length > 0) {
+        document.getElementById('modalDoubleBooking').style.display = 'flex';
+      } else {
+        executeBookingConfirmation();
+      }
+    }
+
+    function closeDoubleModal() {
+      document.getElementById('modalDoubleBooking').style.display = 'none';
+    }
+
+    function executeBookingConfirmation() {
+      closeDoubleModal();
+      var servName = selectedServices.map(function(s){ return s.name; }).join(', ');
+      userBookings.push({ service: servName, date: currentDate, time: currentTime, pro: currentPro });
+
+      document.getElementById('profileHeader').style.display = 'none';
+      document.getElementById('bookingScreen').style.display = 'none';
+      document.getElementById('finalScreen').style.display = 'block';
+    }
+
+    function restartBookingFlow() {
+      document.getElementById('finalScreen').style.display = 'none';
+      document.getElementById('profileHeader').style.display = 'flex';
+      document.getElementById('bookingScreen').style.display = 'block';
+      renderMyBookings();
+    }
+
+    function logoutUser() {
+      currentUser = null;
+      userBookings = [];
+      document.getElementById('finalScreen').style.display = 'none';
+      document.getElementById('profileHeader').style.display = 'flex';
+      document.getElementById('authScreen').style.display = 'block';
+    }
+
+    function selectDate(e, d) {
+      document.querySelectorAll('.date-card').forEach(function(c) { c.classList.remove('selected'); });
+      e.classList.add('selected'); currentDate = d; renderTimes();
+    }
+    function selectPro(e, p) {
+      document.querySelectorAll('.pro-card').forEach(function(c) { c.classList.remove('selected'); });
+      e.classList.add('selected'); currentPro = p; renderTimes();
+    }
+    function selectTime(e, t) {
+      document.querySelectorAll('.time-chip').forEach(function(c) { c.classList.remove('selected'); });
+      e.classList.add('selected'); currentTime = t;
+    }
 
     function toggleService(element, duration, price, name) {
       var index = selectedServices.findIndex(function(s) { return s.name === name; });
@@ -421,57 +441,13 @@
     function renderTimes() {
       var timeGrid = document.getElementById('timeGrid');
       timeGrid.innerHTML = '';
-      var totalDuration = selectedServices.reduce(function(sum, s) { return sum + s.duration; }, 0);
-
       allTimes.forEach(function(time) {
         var chip = document.createElement('div');
-        chip.className = 'time-chip';
+        chip.className = time === currentTime ? 'time-chip selected' : 'time-chip';
         chip.innerText = time;
-
-        var blocked = false;
-        if (currentPro === 'Sena' && time === '11:00' && currentDate === 'Hoje, Sab') blocked = true;
-        if (currentPro === 'Sena' && time === '11:00' && totalDuration > 40 && currentDate === 'Hoje, Sab') blocked = true;
-
-        if (blocked) {
-          chip.classList.add('blocked');
-          chip.title = 'Horário Ocupado';
-        } else {
-          if (time === currentTime) chip.classList.add('selected');
-          chip.onclick = function() { selectTime(chip, time); };
-        }
+        chip.onclick = function() { selectTime(chip, time); };
         timeGrid.appendChild(chip);
       });
-    }
-
-    function selectDate(e, d) {
-      document.querySelectorAll('.date-card').forEach(function(c) { c.classList.remove('selected'); });
-      e.classList.add('selected'); currentDate = d; renderTimes();
-    }
-    function selectPro(e, p) {
-      document.querySelectorAll('.pro-card').forEach(function(c) { c.classList.remove('selected'); });
-      e.classList.add('selected'); currentPro = p; renderTimes();
-    }
-    function selectTime(e, t) {
-      document.querySelectorAll('.time-chip').forEach(function(c) { c.classList.remove('selected'); });
-      e.classList.add('selected'); currentTime = t;
-    }
-
-    async function confirmBooking() {
-      var totalDur = selectedServices.reduce(function(sum, s) { return sum + s.duration; }, 0);
-      var totalPrice = selectedServices.reduce(function(sum, s) { return sum + s.price; }, 0);
-      var serviceNames = selectedServices.map(function(s) { return s.name; }).join(', ');
-
-      if(supabaseClient) {
-        await supabaseClient.from('agendamentos').insert([{
-          servicos_nomes: serviceNames,
-          duracao_total_min: totalDur,
-          valor_total: totalPrice,
-          data_agendamento: '2026-09-28',
-          hora_agendamento: currentTime
-        }]);
-      }
-
-      alert('🎉 AGENDAMENTO CONFIRMADO, AGRADECEMOS A PREFERÊNCIA!\n\nCliente: ' + currentUser.name + '\nData: ' + currentDate + ' às ' + currentTime + '\nDuração Total: ' + totalDur + ' min\nProfissional: ' + currentPro + '\n\n⚠️ Lembre-se: Chegue 10 min antes. Tolerância de apenas 5 min!');
     }
   </script>
 </body>

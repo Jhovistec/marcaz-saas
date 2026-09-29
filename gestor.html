@@ -6,7 +6,7 @@
   <title>Marcaz SaaS - Painel Gestor</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
+  <style id="gestorThemeStyle">
     :root {
       --bg-body: #0a0b0e;
       --bg-card: #14161f;
@@ -24,470 +24,177 @@
     .navbar { background: #10121a; border-bottom: 1px solid var(--border); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     .brand { font-size: 1.1rem; font-weight: bold; color: #fff; }
     .brand span { color: var(--primary); font-size: 0.78rem; display: block; font-weight: normal; margin-top: 2px; }
-    .nav-actions { display: flex; gap: 10px; align-items: center; }
-
-    .btn-header { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; text-decoration: none; }
-    .btn-header:hover { border-color: var(--primary); color: var(--primary); }
-    .badge-status { background: rgba(52, 199, 89, 0.15); border: 1px solid var(--success); color: #66ffa0; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-
+    
     .container { padding: 15px; max-width: 1400px; margin: 0 auto; width: 100%; flex: 1; }
 
-    .login-wrapper { display: flex; justify-content: center; align-items: center; min-height: 70vh; }
-    .login-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px; width: 100%; max-width: 400px; text-align: center; }
-    
     .input-group { text-align: left; margin-bottom: 12px; }
     .input-group label { display: block; font-size: 0.78rem; color: var(--primary); font-weight: bold; margin-bottom: 5px; }
-    .input-box { width: 100%; background: #0a0b0e; border: 1px solid var(--border); color: #fff; padding: 11px; border-radius: 8px; font-size: 0.88rem; outline: none; color-scheme: dark; }
-    .input-box:focus { border-color: var(--primary); }
-
-    /* CORREÇÃO DO ÍCONE DO CALENDÁRIO */
-    input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(1) brightness(100%);
-      cursor: pointer;
-      opacity: 1;
-    }
+    .input-box { width: 100%; background: #0a0b0e; border: 1px solid var(--border); color: #fff; padding: 11px; border-radius: 8px; font-size: 0.88rem; outline: none; }
 
     .btn-primary { width: 100%; background: var(--primary); color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; }
-    .btn-primary:hover { opacity: 0.9; }
+    .btn-header { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
 
     .gestor-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; flex-wrap: wrap; }
-    .tab-btn { background: none; border: 1px solid transparent; color: var(--text-muted); padding: 10px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: bold; cursor: pointer; flex: 1; text-align: center; min-width: 140px; }
+    .tab-btn { background: none; border: 1px solid transparent; color: var(--text-muted); padding: 10px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
     .tab-btn.active { background: rgba(0, 229, 255, 0.1); border-color: var(--primary); color: var(--primary); }
 
     .table-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
-    .table-title { font-size: 0.95rem; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .table-title { font-size: 0.95rem; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+
+    .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.8rem; }
     
-    /* RESPONSIVIDADE MOBILE (CASCATA) */
-    .table-responsive { width: 100%; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
-    th { color: var(--text-muted); padding: 10px; border-bottom: 1px solid var(--border); font-weight: bold; }
-    td { padding: 10px; border-bottom: 1px solid var(--border); }
-
-    @media (max-width: 768px) {
-      .table-desktop { display: none; }
-      .mobile-card-list { display: flex; flex-direction: column; gap: 12px; }
-      .mobile-booking-card { background: #0c0e14; border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-      .mobile-card-row { display: flex; justify-content: space-between; font-size: 0.82rem; }
-    }
-    @media (min-width: 769px) {
-      .mobile-card-list { display: none; }
-    }
-
-    .btn-whats-app {
-      background: #25D366; color: #000; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
-    }
-
-    .pro-highlight {
-      color: var(--primary); font-weight: bold; background: rgba(0, 229, 255, 0.12); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--primary); display: inline-block;
-    }
-
-    .filter-bar { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; }
-    .kpi-label { font-size: 0.78rem; color: var(--text-muted); font-weight: bold; }
-    .kpi-value { font-size: 1.3rem; font-weight: bold; color: var(--primary); margin-top: 5px; }
-
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; height: 300px; }
-    .chart-header { font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; color: #fff; }
-
-    .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
-
-    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.8rem; color: var(--text-main); }
-    .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
-
-    .service-item-list { background: #0c0e14; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; }
-
-    .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); display:none; justify-content:center; align-items:center; z-index:99; }
-    .modal-content { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px; width: 90%; max-width: 360px; text-align: center; }
+    .item-list-row { background: #0c0e14; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size:0.85rem; }
   </style>
 </head>
 <body>
 
   <div class="navbar">
-    <div class="brand">
-      Marcaz SaaS - Painel Gestor
-      <span id="txtCompanyHeader">Selecione / Acesse sua Empresa</span>
-    </div>
-    <div class="nav-actions">
-      <button class="btn-header" onclick="askMasterPassword()">⚡ Marcaz Control</button>
-      <div class="badge-status" id="badgeLicense">● Licença Ativa</div>
-    </div>
+    <div class="brand">Marcaz SaaS - Painel Gestor<span>Barbearia VIP</span></div>
+    <button class="btn-header" onclick="window.location.href='admin.html'">⚡ Marcaz Control</button>
   </div>
 
   <div class="container">
+    <div class="gestor-tabs">
+      <button class="tab-btn active" onclick="switchTab('agendamentos')">📅 Agendamentos</button>
+      <button class="tab-btn" onclick="switchTab('config')">⚙️ Configurações & Promoções</button>
+      <button class="tab-btn" onclick="switchTab('equipe')">👥 Profissionais</button>
+    </div>
 
-    <!-- TELA DE LOGIN DO EMPRESÁRIO COM VALIDAÇÃO REAL -->
-    <div id="viewLogin" class="login-wrapper">
-      <div class="login-box">
-        <h2 style="margin-bottom:8px; font-size:1.2rem;">Acesso do Empresário</h2>
-        <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:15px;">Informe seus dados para entrar no painel</p>
-
-        <div id="loginErrorGestor" style="color:var(--accent); font-weight:bold; font-size:0.8rem; margin-bottom:10px; display:none;">
-          E-mail ou senha incorretos!
-        </div>
-
-        <div class="input-group">
-          <label>E-mail ou WhatsApp:</label>
-          <input type="text" id="loginUser" class="input-box" placeholder="noel@barbearia.com">
-        </div>
-
-        <div class="input-group">
-          <label>Senha de Acesso:</label>
-          <input type="password" id="loginPass" class="input-box" placeholder="••••••••">
-        </div>
-
-        <button class="btn-primary" onclick="doEmpresarioLogin()">Entrar no Painel</button>
+    <!-- TAB AGENDAMENTOS -->
+    <div id="secAgendamentos">
+      <div class="table-card">
+        <div class="table-title"><span>Próximos Agendamentos</span><button class="btn-header">🔄 Atualizar</button></div>
+        <div style="font-size:0.85rem; color:var(--text-muted);">Nenhum agendamento ativo.</div>
       </div>
     </div>
 
-    <!-- ÁREA LOGADA DO EMPRESÁRIO -->
-    <div id="viewDashboard" style="display: none;">
-      
-      <div class="gestor-tabs">
-        <button class="tab-btn active" id="btnTabAgendamentos" onclick="switchGestorTab('agendamentos')">📅 Agendamentos</button>
-        <button class="tab-btn" id="btnTabFaturamento" onclick="askFinancePassword()">💰 Faturamento</button>
-        <button class="tab-btn" id="btnTabConfig" onclick="switchGestorTab('config')">⚙️ Configurações</button>
-      </div>
+    <!-- TAB CONFIGURAÇÕES & PROMOÇÕES -->
+    <div id="secConfig" style="display:none;">
+      <div class="config-grid">
 
-      <!-- TAB 1: AGENDAMENTOS RESPONSIVOS -->
-      <div id="secAgendamentos">
+        <!-- IDENTIDADE, LOGO E TEMA -->
         <div class="table-card">
-          <div class="table-title">
-            <span>Próximos Horários Agendados</span>
-            <button class="btn-header" onclick="loadRealtimeAgendamentos()">🔄 Atualizar Lista</button>
+          <div class="table-title">🏢 Identidade, Logo & Tema</div>
+          <div class="input-group"><label>Logomarca da Empresa (URL / Imagem):</label><input type="text" class="input-box" placeholder="https://link-da-logo.com/logo.png"></div>
+          <div class="input-group">
+            <label>Tema Visual Aplicado:</label>
+            <select id="selThemeGestor" class="input-box" onchange="applyThemeLive(this.value)">
+              <option value="cyan">Cyan Neon (Padrão Marcaz)</option>
+              <option value="gold">Dark Gold Premium</option>
+              <option value="purple">Purple SaaS</option>
+            </select>
           </div>
-          
-          <!-- VISÃO DESKTOP -->
-          <div class="table-responsive table-desktop">
-            <table>
-              <thead>
-                <tr>
-                  <th>Horário</th>
-                  <th>Cliente</th>
-                  <th>WhatsApp</th>
-                  <th>Serviços</th>
-                  <th>Duração</th>
-                  <th>Profissional</th>
-                  <th>Valor</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="tblAgendamentosBody">
-                <tr><td colspan="8" style="text-align:center;">Carregando registros...</td></tr>
-              </tbody>
-            </table>
+          <div class="input-group">
+            <label>Limite de Agendamento Antecipado:</label>
+            <select class="input-box">
+              <option value="7">Até 7 dias à frente</option>
+              <option value="15">Até 15 dias à frente</option>
+              <option value="30" selected>Até 30 dias à frente</option>
+            </select>
+          </div>
+          <button class="btn-primary">Salvar Identidade</button>
+        </div>
+
+        <!-- MÓDULO DE PROMOÇÕES E DESCONTOS -->
+        <div class="table-card">
+          <div class="table-title">🏷️ Cadastrar Promoção</div>
+          <div class="input-group"><label>Nome da Promoção:</label><input type="text" id="promoName" class="input-box" placeholder="Ex: Semana Louca - 20% OFF"></div>
+          <div class="input-group"><label>Desconto (%):</label><input type="number" id="promoPercent" class="input-box" placeholder="20"></div>
+          <div class="input-group">
+            <label>Aplicar em:</label>
+            <select class="input-box"><option value="all">Todos os Serviços</option><option value="corte">Apenas Corte / Cabelo</option></select>
+          </div>
+          <div class="input-group">
+            <label>Validade da Promoção:</label>
+            <div style="display:flex; gap:8px;">
+              <input type="number" class="input-box" placeholder="Qtd" style="width:80px;">
+              <select class="input-box"><option>Dias</option><option>Semanas</option><option>Meses</option></select>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="alert('Promoção cadastrada com sucesso!')">Cadastrar Promoção</button>
+        </div>
+
+        <!-- HORÁRIOS E DIAS DE FUNCIONAMENTO RESTAURADOS -->
+        <div class="table-card">
+          <div class="table-title">⏰ Dias e Horários de Atendimento</div>
+          <div style="margin-bottom:10px;">
+            <div class="checkbox-row"><input type="checkbox" checked> Segunda-feira</div>
+            <div class="checkbox-row"><input type="checkbox" checked> Terça-feira</div>
+            <div class="checkbox-row"><input type="checkbox" checked> Quarta-feira</div>
+            <div class="checkbox-row"><input type="checkbox" checked> Quinta-feira</div>
+            <div class="checkbox-row"><input type="checkbox" checked> Sexta-feira</div>
+            <div class="checkbox-row"><input type="checkbox" checked> Sábado</div>
+            <div class="checkbox-row"><input type="checkbox"> Domingo (Fechado)</div>
           </div>
 
-          <!-- VISÃO MOBILE EM CASCATA -->
-          <div class="mobile-card-list" id="mobileBookingList"></div>
+          <div class="input-group">
+            <label>Horário de Funcionamento Geral (Semana):</label>
+            <div style="display:flex; gap:8px;">
+              <select class="input-box"><option>08:00</option><option>09:00</option><option>10:00</option><option>13:00</option></select>
+              <select class="input-box"><option>18:00</option><option>19:00</option><option>20:00</option><option>22:00</option></select>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label>Horário nos Finais de Semana (Sex, Sáb e Dom):</label>
+            <div style="display:flex; gap:8px;">
+              <select class="input-box"><option>08:00</option><option>09:00</option></select>
+              <select class="input-box"><option>19:00</option><option>20:00</option><option>22:00</option></select>
+            </div>
+          </div>
+
+          <div class="input-group"><label>Horário Diferenciado em Feriados:</label><input type="text" class="input-box" placeholder="Ex: 08:00 às 13:00"></div>
+
+          <button class="btn-primary">Salvar Dias e Horários</button>
         </div>
+
       </div>
-
-      <!-- TAB 2: FATURAMENTO -->
-      <div id="secFaturamento" style="display: none;">
-        <div class="filter-bar">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:0.8rem; font-weight:bold;">Filtrar a partir de:</span>
-            <input type="date" value="2026-10-01" class="input-box" style="width:auto; margin-bottom:0;">
-            <button class="btn-primary" style="width:auto; padding:8px 14px;">Filtrar</button>
-          </div>
-          <button class="btn-header" style="background:#ff3b30; border-color:#ff3b30; color:#fff;" onclick="alert('Gerando Relatório Financeiro PDF...')">📄 Relatório PDF</button>
-        </div>
-
-        <div class="kpi-grid">
-          <div class="kpi-card"><div class="kpi-label">Faturamento Hoje</div><div class="kpi-value" id="kpiHoje">R$ 890,00</div></div>
-          <div class="kpi-card"><div class="kpi-label">Faturamento Semanal</div><div class="kpi-value" id="kpiSemana">R$ 4.350,00</div></div>
-          <div class="kpi-card"><div class="kpi-label">Faturamento Mensal</div><div class="kpi-value" id="kpiMes">R$ 18.290,00</div></div>
-          <div class="kpi-card"><div class="kpi-label">Atendimentos no Mês</div><div class="kpi-value" id="kpiTotalAtend">312</div></div>
-        </div>
-
-        <div class="charts-grid">
-          <div class="chart-card"><div class="chart-header">📈 Evolução do Faturamento</div><div style="height:220px;"><canvas id="chartEvolucao"></canvas></div></div>
-          <div class="chart-card"><div class="chart-header">✂️ Serviços Mais Vendidos</div><div style="height:220px;"><canvas id="chartServicos"></canvas></div></div>
-          <div class="chart-card"><div class="chart-header">⏰ Horários de Maior Movimento</div><div style="height:220px;"><canvas id="chartHorarios"></canvas></div></div>
-        </div>
-      </div>
-
-      <!-- TAB 3: CONFIGURAÇÕES -->
-      <div id="secConfig" style="display: none;">
-        <div class="config-grid">
-          
-          <div class="table-card">
-            <div class="table-title">🏢 Identidade & Tema</div>
-            <div class="input-group"><label>Nome:</label><input type="text" id="cfgEmpNome" class="input-box" value="Barbearia VIP"></div>
-            <div class="input-group"><label>Endereço/Cidade:</label><input type="text" id="cfgEmpEnd" class="input-box" value="Várzea da Palma - MG"></div>
-            <div class="input-group">
-              <label>Tema Visual da PWA:</label>
-              <select id="cfgTema" class="input-box">
-                <option value="cyan">Cyan Neon (Padrão Marcaz)</option>
-                <option value="gold">Dark Gold Premium</option>
-                <option value="purple">Purple SaaS</option>
-                <option value="emerald">Emerald Green</option>
-              </select>
-            </div>
-            <button class="btn-primary" onclick="salvarDadosEmpresa()">Salvar Identidade</button>
-          </div>
-
-          <!-- HORÁRIO AUTOMÁTICO COM SELECTS -->
-          <div class="table-card">
-            <div class="table-title">⏰ Horário de Funcionamento</div>
-            <div style="display:flex; gap:10px;">
-              <div class="input-group" style="flex:1;">
-                <label>Abertura:</label>
-                <select id="selHoraAbre" class="input-box">
-                  <option value="07:00">07:00</option>
-                  <option value="08:00" selected>08:00</option>
-                  <option value="09:00">09:00</option>
-                </select>
-              </div>
-              <div class="input-group" style="flex:1;">
-                <label>Fechamento:</label>
-                <select id="selHoraFecha" class="input-box">
-                  <option value="18:00">18:00</option>
-                  <option value="19:00" selected>19:00</option>
-                  <option value="20:00">20:00</option>
-                  <option value="21:00">21:00</option>
-                </select>
-              </div>
-            </div>
-            <button class="btn-primary" onclick="salvarHorarios()">Salvar Horários de Atendimento</button>
-          </div>
-
-          <!-- TABELA DE SERVIÇOS COM MÁSCARA BRL, SELECTS DE TEMPO E LISTA COM AÇÕES -->
-          <div class="table-card">
-            <div class="table-title">✂️ Serviços & Tabela de Preços</div>
-            <div class="input-group"><label>Nome do Serviço:</label><input type="text" id="cfgServNome" class="input-box" placeholder="Ex: Corte Tradicional"></div>
-            
-            <div class="input-group">
-              <label>Preço (R$):</label>
-              <input type="text" id="cfgServPreco" class="input-box" placeholder="R$ 50,00" oninput="applyMoneyMask(this)">
-            </div>
-
-            <div class="input-group">
-              <label>Duração Estimada:</label>
-              <div style="display:flex; gap:8px;">
-                <select id="selServHoras" class="input-box" style="flex:1;">
-                  <option value="0">0 horas</option>
-                  <option value="1">1 hora</option>
-                  <option value="2">2 horas</option>
-                  <option value="3">3 horas</option>
-                  <option value="4">4 horas</option>
-                  <option value="5">5 horas</option>
-                </select>
-                <select id="selServMinutos" class="input-box" style="flex:1;">
-                  <option value="15">15 min</option>
-                  <option value="30">30 min</option>
-                  <option value="45" selected>45 min</option>
-                  <option value="00">00 min</option>
-                </select>
-              </div>
-            </div>
-
-            <button class="btn-primary" onclick="adicionarServicoTabela()">+ Adicionar Serviço</button>
-
-            <div style="margin-top:15px;" id="listServicosCadastrados">
-              <div class="service-item-list">
-                <div><strong>Corte / Cabelo</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(45 min)</span></div>
-                <div><span style="color:var(--primary); font-weight:bold; margin-right:8px;">R$ 50,00</span> <button style="background:red; color:#fff; border:none; padding:3px 6px; border-radius:4px; cursor:pointer;" onclick="this.parentElement.parentElement.remove()">Excluir</button></div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
     </div>
 
-  </div>
+    <!-- TAB PROFISSIONAIS RESTAURADA -->
+    <div id="secEquipe" style="display:none;">
+      <div class="table-card">
+        <div class="table-title">👥 Cadastrar Profissional da Equipe</div>
+        <div class="input-group"><label>Nome do Profissional:</label><input type="text" id="proName" class="input-box" placeholder="Ex: Ana Souza"></div>
+        <div class="input-group"><label>Especialidade / Cargo:</label><input type="text" id="proRole" class="input-box" placeholder="Ex: Hair Stylist / Design"></div>
+        <button class="btn-primary" onclick="addProMember()">+ Cadastrar Profissional</button>
 
-  <div class="modal-overlay" id="modalFinance" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <h3 style="margin-bottom:10px;">🔒 Acesso Financeiro Restrito</h3>
-      <input type="password" id="inputFinancePassConfirm" class="input-box" placeholder="Senha Financeira" style="margin-bottom:15px;">
-      <button class="btn-primary" onclick="unlockFinance()">Desbloquear Financeiro</button>
+        <div style="margin-top:15px;" id="listProMembers">
+          <div class="item-list-row"><div><strong>Sena</strong> <span style="color:var(--text-muted);">(Master Barber)</span></div><button style="background:red; color:#fff; border:none; padding:4px 8px; border-radius:4px;" onclick="this.parentElement.remove()">Excluir</button></div>
+          <div class="item-list-row"><div><strong>Ana</strong> <span style="color:var(--text-muted);">(Styling / Nails)</span></div><button style="background:red; color:#fff; border:none; padding:4px 8px; border-radius:4px;" onclick="this.parentElement.remove()">Excluir</button></div>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div class="modal-overlay" id="modalMaster" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <h3 style="margin-bottom:10px;">⚡ Acesso Marcaz Control</h3>
-      <input type="password" id="inputMasterPassConfirm" class="input-box" placeholder="Senha Mestre" style="margin-bottom:15px;">
-      <button class="btn-primary" onclick="unlockMasterControl()">Acessar Painel Mestre</button>
-    </div>
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://joadjyqxvpfhgnihezyp.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_RL7vh5enh_hCuM-QZtgefg_Y4dt0Mys';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    let loggedUserType = 'gestor'; // 'gestor' ou nome do funcionario (ex: 'Sena', 'Ana')
-    let chartEv = null, chartServ = null, chartHor = null;
-
-    function applyMoneyMask(el) {
-      let v = el.value.replace(/\D/g, '');
-      v = (v / 100).toFixed(2) + '';
-      v = v.replace(".", ",");
-      v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
-      el.value = 'R$ ' + v;
+    function switchTab(t) {
+      document.getElementById('secAgendamentos').style.display = t === 'agendamentos' ? 'block' : 'none';
+      document.getElementById('secConfig').style.display = t === 'config' ? 'block' : 'none';
+      document.getElementById('secEquipe').style.display = t === 'equipe' ? 'block' : 'none';
     }
 
-    function doEmpresarioLogin() {
-      const u = document.getElementById('loginUser').value.trim();
-      const p = document.getElementById('loginPass').value.trim();
-      const errBox = document.getElementById('loginErrorGestor');
-
-      // VALIDAÇÃO RIGOROSA DE SENHA
-      const validLogins = {
-        'noel@barbearia.com': 'Noel2026',
-        'divas@salao.com': 'Divas2026',
-        'plena@studio.com': 'Plena2026',
-        'admin@empresa.com': '123456',
-        'sena@empresa.com': '123456'
-      };
-
-      if (validLogins[u] && validLogins[u] === p) {
-        errBox.style.display = 'none';
-        loggedUserType = u.includes('sena') ? 'Sena' : 'gestor';
-        document.getElementById('viewLogin').style.display = 'none';
-        document.getElementById('viewDashboard').style.display = 'block';
-        loadRealtimeAgendamentos();
-        setInterval(loadRealtimeAgendamentos, 120000);
-      } else {
-        errBox.style.display = 'block';
-      }
+    function addProMember() {
+      var n = document.getElementById('proName').value;
+      var r = document.getElementById('proRole').value;
+      if (!n || !r) return alert('Preencha Nome e Especialidade.');
+      var list = document.getElementById('listProMembers');
+      var item = document.createElement('div');
+      item.className = 'item-list-row';
+      item.innerHTML = '<div><strong>' + n + '</strong> <span style="color:var(--text-muted);">(' + r + ')</span></div><button style="background:red; color:#fff; border:none; padding:4px 8px; border-radius:4px;" onclick="this.parentElement.remove()">Excluir</button>';
+      list.appendChild(item);
+      document.getElementById('proName').value = '';
+      document.getElementById('proRole').value = '';
     }
 
-    function switchGestorTab(tabName) {
-      document.getElementById('secAgendamentos').style.display = tabName === 'agendamentos' ? 'block' : 'none';
-      document.getElementById('secFaturamento').style.display = tabName === 'faturamento' ? 'block' : 'none';
-      document.getElementById('secConfig').style.display = tabName === 'config' ? 'block' : 'none';
-
-      document.getElementById('btnTabAgendamentos').className = tabName === 'agendamentos' ? 'tab-btn active' : 'tab-btn';
-      document.getElementById('btnTabFaturamento').className = tabName === 'faturamento' ? 'tab-btn active' : 'tab-btn';
-      document.getElementById('btnTabConfig').className = tabName === 'config' ? 'tab-btn active' : 'tab-btn';
+    function applyThemeLive(val) {
+      var root = document.querySelector(':root');
+      if (val === 'gold') root.style.setProperty('--primary', '#ffd700');
+      else if (val === 'purple') root.style.setProperty('--primary', '#b388ff');
+      else root.style.setProperty('--primary', '#00e5ff');
     }
-
-    function askFinancePassword() { document.getElementById('modalFinance').style.display = 'flex'; }
-    function unlockFinance() {
-      if (document.getElementById('inputFinancePassConfirm').value === '1234') {
-        document.getElementById('modalFinance').style.display = 'none';
-        switchGestorTab('faturamento');
-        initCharts();
-      } else alert('Senha financeira incorreta!');
-    }
-
-    function askMasterPassword() { document.getElementById('modalMaster').style.display = 'flex'; }
-    function unlockMasterControl() {
-      if (document.getElementById('inputMasterPassConfirm').value === 'Eva31') window.location.href = 'admin.html';
-      else alert('Senha Mestre Incorreta!');
-    }
-
-    async function loadRealtimeAgendamentos() {
-      const tbody = document.getElementById('tblAgendamentosBody');
-      const mobileList = document.getElementById('mobileBookingList');
-      tbody.innerHTML = ''; mobileList.innerHTML = '';
-
-      let data = [
-        { hora: '09:00', cli: 'Carlos Eduardo', phone: '38999887766', serv: 'Corte + Barba', dur: 75, pro: 'Sena', val: 'R$ 80,00' },
-        { hora: '10:30', cli: 'Jon Teste Silva', phone: '31991124556', serv: 'Corte / Cabelo', dur: 45, pro: 'Sena', val: 'R$ 50,00' },
-        { hora: '14:00', cli: 'Matheus Oliveira', phone: '38988223344', serv: 'Barba / Design', dur: 30, pro: 'Ana', val: 'R$ 30,00' }
-      ];
-
-      try {
-        const res = await supabaseClient.from('agendamentos').select('*');
-        if (res.data && res.data.length > 0) {
-          data = res.data.map(i => ({
-            hora: i.hora_agendamento || '10:30',
-            cli: 'Cliente Agendado',
-            phone: '38999998888',
-            serv: i.servicos_nomes || 'Serviço',
-            dur: i.duracao_total_min || 45,
-            pro: 'Sena',
-            val: 'R$ ' + (i.valor_total || 50) + ',00'
-          }));
-        }
-      } catch(e) {}
-
-      data.forEach(item => {
-        let proDisplay = item.pro;
-        if (loggedUserType !== 'gestor' && item.pro === loggedUserType) {
-          proDisplay = `<span class="pro-highlight">★ ${item.pro}</span>`;
-        }
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${item.hora}</strong></td>
-          <td>${item.cli}</td>
-          <td><a href="https://wa.me/55${item.phone}" target="_blank" class="btn-whats-app">💬 WhatsApp</a></td>
-          <td>${item.serv}</td>
-          <td>${item.dur} min</td>
-          <td>${proDisplay}</td>
-          <td style="color:var(--primary); font-weight:bold;">${item.val}</td>
-          <td><span style="color:var(--success); font-weight:bold;">● Confirmado</span></td>
-        `;
-        tbody.appendChild(tr);
-
-        const card = document.createElement('div');
-        card.className = 'mobile-booking-card';
-        card.innerHTML = `
-          <div class="mobile-card-row"><strong>⏰ ${item.hora} - ${item.cli}</strong><span style="color:var(--success);">● Confirmado</span></div>
-          <div class="mobile-card-row"><span>${item.serv} (${item.dur} min)</span><strong style="color:var(--primary);">${item.val}</strong></div>
-          <div class="mobile-card-row"><span>Atendente: ${proDisplay}</span><a href="https://wa.me/55${item.phone}" target="_blank" class="btn-whats-app">💬 WhatsApp</a></div>
-        `;
-        mobileList.appendChild(card);
-      });
-    }
-
-    function initCharts() {
-      if (chartEv) chartEv.destroy();
-      if (chartServ) chartServ.destroy();
-      if (chartHor) chartHor.destroy();
-
-      const ctx1 = document.getElementById('chartEvolucao').getContext('2d');
-      chartEv = new Chart(ctx1, {
-        type: 'line',
-        data: { labels: ['Dia 01', 'Dia 05', 'Dia 10', 'Dia 15', 'Dia 20'], datasets: [{ label: 'Faturamento (R$)', data: [400, 850, 1200, 1450, 1800], borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,0.1)', fill: true }] },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-
-      const ctx2 = document.getElementById('chartServicos').getContext('2d');
-      chartServ = new Chart(ctx2, {
-        type: 'doughnut',
-        data: { labels: ['Corte + Barba', 'Corte Tradicional', 'Outros'], datasets: [{ data: [50, 30, 20], backgroundColor: ['#00e5ff', '#0099ff', '#ff3b30'] }] },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-
-      const ctx3 = document.getElementById('chartHorarios').getContext('2d');
-      chartHor = new Chart(ctx3, {
-        type: 'bar',
-        data: { labels: ['09:00', '10:30', '14:00', '15:30'], datasets: [{ label: 'Atendimentos', data: [12, 28, 18, 32], backgroundColor: '#00e5ff' }] },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-    }
-
-    function adicionarServicoTabela() {
-      const nome = document.getElementById('cfgServNome').value.trim();
-      const preco = document.getElementById('cfgServPreco').value.trim();
-      const h = document.getElementById('selServHoras').value;
-      const m = document.getElementById('selServMinutos').value;
-
-      if (!nome || !preco) return alert('Informe Nome e Preço do Serviço.');
-
-      const container = document.getElementById('listServicosCadastrados');
-      const item = document.createElement('div');
-      item.className = 'service-item-list';
-      item.innerHTML = `
-        <div><strong>${nome}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${h}h ${m}m)</span></div>
-        <div><span style="color:var(--primary); font-weight:bold; margin-right:8px;">${preco}</span> <button style="background:red; color:#fff; border:none; padding:3px 6px; border-radius:4px; cursor:pointer;" onclick="this.parentElement.parentElement.remove()">Excluir</button></div>
-      `;
-      container.appendChild(item);
-      alert('Serviço adicionado à lista!');
-    }
-
-    function salvarDadosEmpresa() { alert('Identidade visual salva!'); }
-    function salvarHorarios() { alert('Horário de funcionamento salvo!'); }
   </script>
 </body>
 </html>
