@@ -25,7 +25,6 @@
     .header-title { font-size: 1.3rem; font-weight: bold; }
     .header-title span { color: var(--primary); font-size: 0.8rem; display: block; }
 
-    /* LOGIN CONTROL */
     .login-wrapper { display: flex; justify-content: center; align-items: center; min-height: 75vh; }
     .login-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 35px; width: 100%; max-width: 400px; text-align: center; }
 
@@ -52,7 +51,6 @@
 </head>
 <body>
 
-  <!-- TELA DE LOGIN CONTROL -->
   <div id="loginControlView" class="login-wrapper">
     <div class="login-box">
       <h2 style="margin-bottom: 8px; font-size: 1.3rem;">⚡ Marcaz Control</h2>
@@ -68,7 +66,6 @@
     </div>
   </div>
 
-  <!-- ÁREA PAINEL MESTRE (LOGADO) -->
   <div id="mainControlArea" style="display: none;">
     <div class="header-control">
       <div class="header-title">
@@ -83,7 +80,6 @@
 
     <div class="grid-control">
       
-      <!-- CARD 1: SELEÇÃO DE EMPRESAS & BLOQUEIO INDIVIDUAL -->
       <div class="card-control">
         <h3 style="margin-bottom: 15px; font-size: 1rem;">🏢 Empresas Parceiras</h3>
         <span class="input-label">Selecione a Empresa:</span>
@@ -103,7 +99,6 @@
         <button class="btn-action btn-demo" onclick="redefinirSenhaEmpresario()">🔑 Resetar Senha do Empresário (SMS)</button>
       </div>
 
-      <!-- CARD 2: CADASTRAR NOVA EMPRESA COM MÁSCARAS SEPARADAS -->
       <div class="card-control">
         <h3 style="margin-bottom: 15px; font-size: 1rem;">➕ Cadastrar Nova Empresa / Licença</h3>
         
@@ -122,22 +117,20 @@
         <button class="btn-action" onclick="cadastrarNovaEmpresa()">Criar Licença SaaS</button>
       </div>
 
-      <!-- CARD 3: MODO APRESENTAÇÃO COMERCIAL & DEMOS -->
+      <!-- CARD RESTAURADO: CADASTRAR FUNCIONÁRIOS DA JHOVIS TECNOLOGIA -->
       <div class="card-control">
-        <h3 style="margin-bottom: 15px; font-size: 1rem;">🎯 Modo Apresentação & Demos</h3>
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">Apresente modelos fictícios sem afetar os dados reais:</p>
-        
-        <button class="btn-action btn-demo" onclick="openDemo('barbearia_noel')">💈 Barbearia Noel (Demonstração)</button>
-        <button class="btn-action btn-demo" onclick="openDemo('salao_divas')">💅 Salão Divas (Demonstração)</button>
-        <button class="btn-action btn-demo" onclick="openDemo('studio_plena')">✨ Studio Plena (Demonstração)</button>
-        
-        <hr style="border-color: var(--border); margin: 12px 0;">
-        <button class="btn-action btn-danger" onclick="resetDemoData()">🔄 Restaurar Backup Fixo de Testes</button>
+        <h3 style="margin-bottom: 15px; font-size: 1rem;">🛠️ Equipe Jhovis Tecnologia</h3>
+        <span class="input-label">Nome do Colaborador:</span>
+        <input type="text" id="jhovisMemberName" class="input-box" placeholder="Nome do Analista/Suporte">
+
+        <span class="input-label">Cargo / Função:</span>
+        <input type="text" id="jhovisMemberRole" class="input-box" placeholder="Ex: Gerente de Suporte">
+
+        <button class="btn-action" onclick="cadastrarMembroJhovis()">+ Cadastrar Operador Control</button>
       </div>
 
     </div>
 
-    <!-- SEÇÃO FATURAMENTO FINANCEIRO DA EMPRESA SELECIONADA -->
     <div class="card-control" style="margin-bottom: 25px;">
       <h3 style="margin-bottom: 15px; font-size: 1rem; color: var(--primary);" id="txtFinanceHeader">📊 Faturamento Financeiro: Barbearia VIP</h3>
       
@@ -238,6 +231,12 @@
       alert('Status da empresa alterado com sucesso para: ' + newStatus);
     }
 
+    function cadastrarMembroJhovis() {
+      const name = document.getElementById('jhovisMemberName').value;
+      if (!name) return alert('Informe o nome do colaborador.');
+      alert('Operador cadastrado na equipe Jhovis Tecnologia!');
+    }
+
     function redefinirSenhaEmpresario() {
       const selKey = document.getElementById('selEmpresa').value;
       const newPass = Math.random().toString(36).slice(-6).toUpperCase();
@@ -252,21 +251,13 @@
       alert('Nova licença SaaS criada com sucesso para: ' + nome);
     }
 
-    function openDemo(type) {
-      window.open('index.html?demo=' + type, '_blank');
-    }
-
-    function resetDemoData() {
-      alert('🎉 Dados de demonstração restaurados com sucesso!');
-    }
-
     function renderFinanceChart(chartData) {
       const ctx = document.getElementById('chartFinanceControl').getContext('2d');
       if (chartInstance) chartInstance.destroy();
       chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: ['Dia 01', 'Dia 05', 'Dia 10', 'Dia 15', 'Dia 20', 'Dia 25'],
+          labels: ['Dia 01', 'Dia 05', 'Dia 10', 'Dia 15', 'Dia 20'],
           datasets: [{ label: 'Faturamento (R$)', data: chartData, borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,0.05)', fill: true, tension: 0.3 }]
         },
         options: { responsive: true, maintainAspectRatio: false }

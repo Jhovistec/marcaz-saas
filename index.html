@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Agendamento Online - Marcaz / Jhovis Tecnologia</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style id="themeStyle">
+  <style>
     :root {
       --bg-body: #0d0e12;
       --bg-card: #16181f;
@@ -24,12 +24,6 @@
     }
 
     .mobile-app { width: 100%; max-width: 480px; padding: 20px; position: relative; z-index: 1; }
-
-    .company-selector-bar {
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;
-    }
-    .company-selector-bar label { font-size: 0.75rem; color: var(--primary); font-weight: bold; }
-    .company-selector-bar select { background: #0d0e12; border: 1px solid var(--border); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; outline: none; }
 
     .profile-card {
       background: linear-gradient(135deg, rgba(22, 24, 31, 0.95) 0%, rgba(31, 34, 46, 0.95) 100%);
@@ -109,16 +103,6 @@
 <body>
 
   <div class="mobile-app">
-    
-    <div class="company-selector-bar">
-      <label>Unidade / Estabelecimento:</label>
-      <select id="selCompanyUnit" onchange="changeCompanyUnit(this.value)">
-        <option value="barbearia_vip">Barbearia VIP - Várzea da Palma</option>
-        <option value="barbearia_noel">Barbearia Noel (Cyan Neon)</option>
-        <option value="salao_divas">Salão Divas (Dark Gold)</option>
-        <option value="studio_plena">Studio Plena (Purple SaaS)</option>
-      </select>
-    </div>
 
     <div class="profile-card">
       <div class="profile-top">
@@ -127,6 +111,7 @@
           <div class="profile-info">
             <h1 id="appTitle">Salão & Barbearia - Jhovis</h1>
             <p id="appCity">📍 Várzea da Palma - MG</p>
+            <p style="font-size: 0.7rem; color: var(--primary); margin-top: 3px;">⏰ Horário de funcionamento: 08:00 às 19:00</p>
           </div>
         </div>
       </div>
@@ -139,7 +124,6 @@
 
     <div id="authScreen" class="auth-container">
       
-      <!-- TELA DE LOGIN -->
       <div id="loginView" style="display: block;">
         <div class="auth-title">Acesse sua Conta</div>
         <div class="auth-desc">Informe seu Telefone ou CPF para entrar na agenda.</div>
@@ -161,7 +145,6 @@
         <button type="button" class="btn-register-link" id="btnGoRegister">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
       </div>
 
-      <!-- TELA DE CADASTRO COM MÁSCARAS E BOTÃO CORRIGIDOS -->
       <div id="registerView" style="display: none;">
         <div class="auth-title">Novo Cadastro</div>
         <div class="auth-desc">Preencha seus dados para realizar agendamentos.</div>
@@ -184,7 +167,6 @@
 
     </div>
 
-    <!-- TELA DE AGENDAMENTO -->
     <div id="bookingScreen" style="display: none;">
       <div class="welcome-banner" id="welcomeBanner"></div>
 
@@ -245,24 +227,6 @@
         );
       }
     } catch(e) {}
-
-    function changeCompanyUnit(val) {
-      var t = document.getElementById('appTitle');
-      var c = document.getElementById('appCity');
-      var a = document.getElementById('appAvatar');
-      var r = document.querySelector(':root');
-
-      if (val === 'salao_divas') {
-        t.innerText = 'Salão Divas'; c.innerText = '📍 Montes Claros - MG'; a.innerText = 'D';
-        r.style.setProperty('--primary', '#ffd700');
-      } else if (val === 'studio_plena') {
-        t.innerText = 'Studio Plena'; c.innerText = '📍 Uberlândia - MG'; a.innerText = 'P';
-        r.style.setProperty('--primary', '#b388ff');
-      } else {
-        t.innerText = 'Salão & Barbearia - Jhovis'; c.innerText = '📍 Várzea da Palma - MG'; a.innerText = 'J';
-        r.style.setProperty('--primary', '#00e5ff');
-      }
-    }
 
     function formatPhone(v) {
       v = v.replace(/\D/g, '');
@@ -338,7 +302,6 @@
       if(btnGoRegister) btnGoRegister.onclick = function() { loginView.style.display = 'none'; registerView.style.display = 'block'; };
       if(btnGoLogin) btnGoLogin.onclick = function() { registerView.style.display = 'none'; loginView.style.display = 'block'; };
 
-      // AÇÃO DO BOTÃO FINALIZAR CADASTRO
       var btnDoRegister = document.getElementById('btnDoRegister');
       if(btnDoRegister) {
         btnDoRegister.onclick = async function() {
