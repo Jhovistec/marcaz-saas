@@ -284,6 +284,7 @@
 
     function generateDynamicDates() {
       var dateGrid = document.getElementById('dateGrid');
+      if (!dateGrid) return;
       dateGrid.innerHTML = '';
       var today = new Date();
       var daysWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -311,11 +312,69 @@
     document.addEventListener('DOMContentLoaded', function() {
       generateDynamicDates();
 
+      // ELEMENTOS E BOTÕES DE TROCA DE ABA (TELEFONE / CPF)
+      var tabPhone = document.getElementById('tabPhone');
+      var tabCPF = document.getElementById('tabCPF');
+      var inpLogin = document.getElementById('inputLoginValue');
+      var lblLogin = document.getElementById('lblLoginType');
+      var errBox = document.getElementById('loginErrorMsg');
+
+      if (tabPhone) {
+        tabPhone.onclick = function() {
+          mode = 'phone';
+          tabPhone.className = 'btn-tab active';
+          tabCPF.className = 'btn-tab';
+          if (lblLogin) lblLogin.innerText = 'Digite apenas os números do WhatsApp:';
+          if (inpLogin) {
+            inpLogin.placeholder = '(99) 99999-9999';
+            inpLogin.value = '';
+          }
+          if (errBox) errBox.style.display = 'none';
+        };
+      }
+
+      if (tabCPF) {
+        tabCPF.onclick = function() {
+          mode = 'cpf';
+          tabCPF.className = 'btn-tab active';
+          tabPhone.className = 'btn-tab';
+          if (lblLogin) lblLogin.innerText = 'Digite apenas os números do CPF:';
+          if (inpLogin) {
+            inpLogin.placeholder = '123.456.789-00';
+            inpLogin.value = '';
+          }
+          if (errBox) errBox.style.display = 'none';
+        };
+      }
+
+      if (inpLogin) {
+        inpLogin.oninput = function() {
+          if (mode === 'phone') inpLogin.value = formatPhone(inpLogin.value);
+          else inpLogin.value = formatCPF(inpLogin.value);
+        };
+      }
+
+      // NAVEGAÇÃO LOGIN <-> CADASTRO
+      var btnGoRegister = document.getElementById('btnGoRegister');
+      var btnGoLogin = document.getElementById('btnGoLogin');
+      var loginView = document.getElementById('loginView');
+      var registerView = document.getElementById('registerView');
+
+      if (btnGoRegister) btnGoRegister.onclick = function() { loginView.style.display = 'none'; registerView.style.display = 'block'; };
+      if (btnGoLogin) btnGoLogin.onclick = function() { registerView.style.display = 'none'; loginView.style.display = 'block'; };
+
+      // AÇÕES DE LOGIN E CADASTRO
       var btnLogin = document.getElementById('btnLogin');
       if (btnLogin) {
         btnLogin.onclick = function() {
-          var val = document.getElementById('inputLoginValue').value.trim();
-          if (!val) return alert('Digite seu Telefone ou CPF.');
+          var val = inpLogin.value.trim();
+          if (!val) {
+            if (errBox) {
+              errBox.innerText = 'Por favor, digite seu Telefone ou CPF para continuar.';
+              errBox.style.display = 'block';
+            }
+            return;
+          }
           currentUser = { name: 'Jonathan', isVeteran: true, lastVisit: '20/09/2026' };
           openBooking();
         };
