@@ -37,7 +37,6 @@
       width: 55px; height: 55px; border-radius: 50%;
       background-color: var(--primary); display: flex; align-items: center;
       justify-content: center; font-weight: bold; color: #000; font-size: 1.3rem;
-      background-size: cover; background-position: center;
     }
     .profile-info h1 { font-size: 1.05rem; margin-bottom: 2px; }
     .profile-info p { font-size: 0.75rem; color: var(--text-muted); }
@@ -132,7 +131,6 @@
       </div>
     </div>
 
-    <!-- TELA DE AUTENTICAÇÃO -->
     <div id="authScreen" class="auth-container">
       
       <div id="loginView" style="display: block;">
@@ -178,11 +176,9 @@
 
     </div>
 
-    <!-- TELA DE AGENDAMENTO -->
     <div id="bookingScreen" style="display: none;">
       <div class="welcome-banner" id="welcomeBanner"></div>
 
-      <!-- SEÇÃO MEUS AGENDAMENTOS ATIVOS -->
       <div class="my-bookings-container">
         <div class="section-title" style="margin-bottom:5px; color:var(--primary);">📋 Meus Agendamentos Ativos</div>
         <div id="myBookingsList"><span style="font-size:0.78rem; color:var(--text-muted);">Nenhum agendamento pendente.</span></div>
@@ -223,7 +219,6 @@
       </div>
     </div>
 
-    <!-- TELA DE ENCERRAMENTO (TELA LIMPA COM LOGO E BOTÕES) -->
     <div id="finalScreen" style="display: none; text-align: center; padding-top: 20px;">
       <div style="width: 110px; height: 110px; border-radius: 50%; background: var(--primary); color: #000; font-size: 2.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;" id="finalLogo">J</div>
       <h2 style="font-size: 1.3rem; margin-bottom: 6px;" id="finalTitle">Salão & Barbearia - Jhovis</h2>
@@ -243,7 +238,6 @@
     <div class="footer-whitelabel">POWERED BY <strong>JHOVIS TECNOLOGIA</strong></div>
   </div>
 
-  <!-- MODAL DE AGENDAMENTO DUPLO -->
   <div class="modal-overlay" id="modalDoubleBooking">
     <div class="modal-content">
       <h3 style="font-size: 1.05rem; margin-bottom: 12px; color: #fff;">⚠️ Agendamento Já Existente</h3>
@@ -258,10 +252,10 @@
     var currentUser = null;
     var userBookings = [];
     var currentDate = '';
+    var isTodaySelected = true;
     var currentPro = 'Sena';
-    var currentTime = '10:30';
+    var currentTime = '';
     var selectedServices = [{ name: 'Corte / Cabelo', duration: 45, price: 40 }];
-    var allTimes = ['09:00', '10:30', '11:00', '11:20', '14:00', '15:30'];
 
     function formatPhone(v) {
       v = v.replace(/\D/g, '');
@@ -296,13 +290,19 @@
         var dayNum = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
         var fullDateStr = dayName + ', ' + dayNum;
 
-        if (i === 0) currentDate = fullDateStr;
+        if (i === 0) {
+          currentDate = fullDateStr;
+          isTodaySelected = true;
+        }
 
         var card = document.createElement('div');
         card.className = i === 0 ? 'date-card selected' : 'date-card';
-        card.onclick = (function(el, str) {
-          return function() { selectDate(el, str); };
-        })(card, fullDateStr);
+        card.onclick = (function(el, str, isToday) {
+          return function() { 
+            isTodaySelected = isToday;
+            selectDate(el, str); 
+          };
+        })(card, fullDateStr, i === 0);
 
         card.innerHTML = '<div class="date-day">' + dayName + '</div><div class="date-num">' + dayNum + '</div>';
         dateGrid.appendChild(card);
@@ -312,7 +312,6 @@
     document.addEventListener('DOMContentLoaded', function() {
       generateDynamicDates();
 
-      // ELEMENTOS E BOTÕES DE TROCA DE ABA (TELEFONE / CPF)
       var tabPhone = document.getElementById('tabPhone');
       var tabCPF = document.getElementById('tabCPF');
       var inpLogin = document.getElementById('inputLoginValue');
@@ -325,10 +324,7 @@
           tabPhone.className = 'btn-tab active';
           tabCPF.className = 'btn-tab';
           if (lblLogin) lblLogin.innerText = 'Digite apenas os números do WhatsApp:';
-          if (inpLogin) {
-            inpLogin.placeholder = '(99) 99999-9999';
-            inpLogin.value = '';
-          }
+          if (inpLogin) { inpLogin.placeholder = '(99) 99999-9999'; inpLogin.value = ''; }
           if (errBox) errBox.style.display = 'none';
         };
       }
@@ -339,10 +335,7 @@
           tabCPF.className = 'btn-tab active';
           tabPhone.className = 'btn-tab';
           if (lblLogin) lblLogin.innerText = 'Digite apenas os números do CPF:';
-          if (inpLogin) {
-            inpLogin.placeholder = '123.456.789-00';
-            inpLogin.value = '';
-          }
+          if (inpLogin) { inpLogin.placeholder = '123.456.789-00'; inpLogin.value = ''; }
           if (errBox) errBox.style.display = 'none';
         };
       }
@@ -354,7 +347,6 @@
         };
       }
 
-      // NAVEGAÇÃO LOGIN <-> CADASTRO
       var btnGoRegister = document.getElementById('btnGoRegister');
       var btnGoLogin = document.getElementById('btnGoLogin');
       var loginView = document.getElementById('loginView');
@@ -363,16 +355,12 @@
       if (btnGoRegister) btnGoRegister.onclick = function() { loginView.style.display = 'none'; registerView.style.display = 'block'; };
       if (btnGoLogin) btnGoLogin.onclick = function() { registerView.style.display = 'none'; loginView.style.display = 'block'; };
 
-      // AÇÕES DE LOGIN E CADASTRO
       var btnLogin = document.getElementById('btnLogin');
       if (btnLogin) {
         btnLogin.onclick = function() {
           var val = inpLogin.value.trim();
           if (!val) {
-            if (errBox) {
-              errBox.innerText = 'Por favor, digite seu Telefone ou CPF para continuar.';
-              errBox.style.display = 'block';
-            }
+            if (errBox) { errBox.innerText = 'Por favor, digite seu Telefone ou CPF para continuar.'; errBox.style.display = 'block'; }
             return;
           }
           currentUser = { name: 'Jonathan', isVeteran: true, lastVisit: '20/09/2026' };
@@ -425,6 +413,7 @@
     }
 
     function handleBookingAttempt() {
+      if (!currentTime) return alert('Por favor, selecione um horário disponível.');
       if (userBookings.length > 0) {
         document.getElementById('modalDoubleBooking').style.display = 'flex';
       } else {
@@ -497,10 +486,49 @@
       document.getElementById('btnConfirm').innerText = 'Confirmar Agendamento (R$ ' + totalPrice + ',00 | ⏱️ ' + totalDuration + ' min)';
     }
 
+    // LÓGICA DE HORÁRIOS A PARTIR DA HORA ATUAL (ABERTURA ÀS 19:00 COM PASSO DE 15 MINUTOS)
     function renderTimes() {
       var timeGrid = document.getElementById('timeGrid');
       timeGrid.innerHTML = '';
-      allTimes.forEach(function(time) {
+
+      var now = new Date();
+      var currentHour = now.getHours();
+      var currentMin = now.getMinutes();
+
+      // Arredonda para o próximo intervalo de 15 min
+      var roundedMin = Math.ceil(currentMin / 15) * 15;
+      if (roundedMin === 60) {
+        currentHour += 1;
+        roundedMin = 0;
+      }
+
+      var currentTotalMin = currentHour * 60 + roundedMin;
+
+      var startHour = 8; // Abertura 08:00
+      var endHour = 19;  // Fechamento 19:00
+
+      var times = [];
+      for (var h = startHour; h < endHour; h++) {
+        for (var m = 0; m < 60; m += 30) {
+          var slotTotalMin = h * 60 + m;
+          // Se for HOJE, filtra apenas horários futuros em relação ao horário atual
+          if (!isTodaySelected || slotTotalMin >= currentTotalMin) {
+            var hStr = String(h).padStart(2, '0');
+            var mStr = String(m).padStart(2, '0');
+            times.push(hStr + ':' + mStr);
+          }
+        }
+      }
+
+      if (times.length === 0) {
+        timeGrid.innerHTML = '<div style="grid-column: span 3; font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 10px;">Sem horários disponíveis para hoje. Escolha outra data.</div>';
+        currentTime = '';
+        return;
+      }
+
+      if (!times.includes(currentTime)) currentTime = times[0];
+
+      times.forEach(function(time) {
         var chip = document.createElement('div');
         chip.className = time === currentTime ? 'time-chip selected' : 'time-chip';
         chip.innerText = time;
