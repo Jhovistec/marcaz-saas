@@ -72,13 +72,13 @@
 
     .section-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: bold; text-align: left; }
 
-    .date-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
-    .date-card { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 4px; border-radius: 10px; text-align: center; cursor: pointer; }
+    .date-grid { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+    .date-card { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 14px; border-radius: 10px; text-align: center; cursor: pointer; min-width: 75px; flex-shrink: 0; }
     .date-card.selected { border-color: var(--primary); background: rgba(0, 229, 255, 0.1); }
     .date-day { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
     .date-num { font-weight: bold; font-size: 0.95rem; color: var(--text-main); margin-top: 2px; }
 
-    .pro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+    .pro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 20px; }
     .pro-card { background: var(--bg-card); border: 1px solid var(--border); padding: 10px 6px; border-radius: 10px; text-align: center; cursor: pointer; }
     .pro-card.selected { border-color: var(--primary); background: rgba(0, 229, 255, 0.08); }
     .pro-name { font-weight: bold; font-size: 0.85rem; }
@@ -120,7 +120,7 @@
           <div class="profile-info">
             <h1 id="appTitle">Salão & Barbearia - Jhovis</h1>
             <p id="appCity">📍 Várzea da Palma - MG</p>
-            <p style="font-size: 0.7rem; color: var(--primary); margin-top: 3px;" id="appHours">⏰ Horário de funcionamento: 08:00 às 19:00</p>
+            <p style="font-size: 0.7rem; color: var(--primary); margin-top: 3px;" id="appHours">⏰ Horário: 08:00 às 19:00</p>
           </div>
         </div>
       </div>
@@ -131,6 +131,7 @@
       </div>
     </div>
 
+    <!-- TELA DE AUTENTICAÇÃO -->
     <div id="authScreen" class="auth-container">
       
       <div id="loginView" style="display: block;">
@@ -149,7 +150,7 @@
         
         <button type="button" class="btn-login" id="btnLogin">Entrar na Agenda</button>
         <br>
-        <button type="button" class="btn-register-link" id="btnResetPass">Esqueceu sua senha? Redefinir via SMS</button>
+        <button type="button" class="btn-register-link" id="btnResetPass" onclick="alert('Instruções de redefinição enviadas via SMS!')">Esqueceu sua senha? Redefinir via SMS</button>
         <br>
         <button type="button" class="btn-register-link" id="btnGoRegister">Primeira vez aqui? Clique para criar um Novo Cadastro</button>
       </div>
@@ -176,9 +177,11 @@
 
     </div>
 
+    <!-- TELA DE AGENDAMENTO -->
     <div id="bookingScreen" style="display: none;">
       <div class="welcome-banner" id="welcomeBanner"></div>
 
+      <!-- SEÇÃO MEUS AGENDAMENTOS ATIVOS -->
       <div class="my-bookings-container">
         <div class="section-title" style="margin-bottom:5px; color:var(--primary);">📋 Meus Agendamentos Ativos</div>
         <div id="myBookingsList"><span style="font-size:0.78rem; color:var(--text-muted);">Nenhum agendamento pendente.</span></div>
@@ -219,6 +222,7 @@
       </div>
     </div>
 
+    <!-- TELA DE ENCERRAMENTO (TELA LIMPA COM LOGO E BOTÕES) -->
     <div id="finalScreen" style="display: none; text-align: center; padding-top: 20px;">
       <div style="width: 110px; height: 110px; border-radius: 50%; background: var(--primary); color: #000; font-size: 2.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;" id="finalLogo">J</div>
       <h2 style="font-size: 1.3rem; margin-bottom: 6px;" id="finalTitle">Salão & Barbearia - Jhovis</h2>
@@ -238,6 +242,7 @@
     <div class="footer-whitelabel">POWERED BY <strong>JHOVIS TECNOLOGIA</strong></div>
   </div>
 
+  <!-- MODAL DE AGENDAMENTO DUPLO -->
   <div class="modal-overlay" id="modalDoubleBooking">
     <div class="modal-content">
       <h3 style="font-size: 1.05rem; margin-bottom: 12px; color: #fff;">⚠️ Agendamento Já Existente</h3>
@@ -255,6 +260,7 @@
     var isTodaySelected = true;
     var currentPro = 'Sena';
     var currentTime = '';
+    var maxDaysAhead = 30;
     var selectedServices = [{ name: 'Corte / Cabelo', duration: 45, price: 40 }];
 
     function formatPhone(v) {
@@ -283,7 +289,7 @@
       var today = new Date();
       var daysWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < maxDaysAhead; i++) {
         var d = new Date();
         d.setDate(today.getDate() + i);
         var dayName = i === 0 ? 'Hoje' : daysWeek[d.getDay()];
@@ -384,7 +390,11 @@
       document.getElementById('bookingScreen').style.display = 'block';
 
       var banner = document.getElementById('welcomeBanner');
-      banner.innerHTML = '🎉 Que bom ter você conosco aqui, <strong>' + currentUser.name + '</strong>!';
+      if (currentUser.isVeteran) {
+        banner.innerHTML = '🎉 Estamos felizes <strong>' + currentUser.name + '</strong>, de você ter voltado! Sua última visita conosco foi no dia <strong>' + currentUser.lastVisit + '</strong>!';
+      } else {
+        banner.innerHTML = '🎉 Que bom ter você conosco aqui, <strong>' + currentUser.name + '</strong>!';
+      }
 
       renderMyBookings();
       renderTimes();
@@ -407,6 +417,21 @@
     }
 
     function cancelBooking(index) {
+      // Regra de Trava de 15 Minutos para Cancelamento
+      var booking = userBookings[index];
+      if (isTodaySelected && booking) {
+        var now = new Date();
+        var parts = booking.time.split(':');
+        var bHour = parseInt(parts[0], 10);
+        var bMin = parseInt(parts[1], 10);
+        var bTotalMin = bHour * 60 + bMin;
+        var nowTotalMin = now.getHours() * 60 + now.getMinutes();
+
+        if (bTotalMin - nowTotalMin <= 15) {
+          return alert('⚠️ Trava de Cancelamento: Faltam 15 minutos ou menos para o seu horário agendado. Por favor, entre em contato direto pelo WhatsApp para cancelar.');
+        }
+      }
+
       userBookings.splice(index, 1);
       renderMyBookings();
       alert('Agendamento cancelado com sucesso!');
@@ -486,7 +511,6 @@
       document.getElementById('btnConfirm').innerText = 'Confirmar Agendamento (R$ ' + totalPrice + ',00 | ⏱️ ' + totalDuration + ' min)';
     }
 
-    // LÓGICA DE HORÁRIOS A PARTIR DA HORA ATUAL (ABERTURA ÀS 19:00 COM PASSO DE 15 MINUTOS)
     function renderTimes() {
       var timeGrid = document.getElementById('timeGrid');
       timeGrid.innerHTML = '';
@@ -495,7 +519,6 @@
       var currentHour = now.getHours();
       var currentMin = now.getMinutes();
 
-      // Arredonda para o próximo intervalo de 15 min
       var roundedMin = Math.ceil(currentMin / 15) * 15;
       if (roundedMin === 60) {
         currentHour += 1;
@@ -504,14 +527,13 @@
 
       var currentTotalMin = currentHour * 60 + roundedMin;
 
-      var startHour = 8; // Abertura 08:00
-      var endHour = 19;  // Fechamento 19:00
+      var startHour = 8;
+      var endHour = 19;
 
       var times = [];
       for (var h = startHour; h < endHour; h++) {
         for (var m = 0; m < 60; m += 30) {
           var slotTotalMin = h * 60 + m;
-          // Se for HOJE, filtra apenas horários futuros em relação ao horário atual
           if (!isTodaySelected || slotTotalMin >= currentTotalMin) {
             var hStr = String(h).padStart(2, '0');
             var mStr = String(m).padStart(2, '0');

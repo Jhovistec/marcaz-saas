@@ -54,22 +54,26 @@
       <span class="input-label">Nome Completo:</span>
       <input type="text" id="jName" class="input-box" placeholder="Ex: Eva Silva">
 
-      <span class="input-label">Telefone (Login de Acesso):</span>
-      <input type="text" id="jPhone" class="input-box" placeholder="(34) 99115-7546">
+      <span class="input-label">Cargo / Função:</span>
+      <input type="text" id="jCargo" class="input-box" placeholder="Ex: Gerente de Operações">
 
-      <span class="input-label">Perfil / Cargo:</span>
-      <select id="jRole" class="input-box">
+      <span class="input-label">Telefone (Login de Acesso):</span>
+      <input type="text" id="jPhone" class="input-box" placeholder="(38) 99988-7766">
+
+      <span class="input-label">Perfil de Acesso:</span>
+      <select id="jRole" class="input-box" onchange="updateRoleCheckboxes(this.value)">
         <option value="Master">Master Control</option>
-        <option value="Gerente">Gerente de Suporte</option>
-        <option value="Operador">Operador de Atendimento</option>
+        <option value="Gerente" selected>Gerente</option>
+        <option value="Operador">Operador</option>
       </select>
 
-      <span class="input-label">Permissões e Funções Autorizadas:</span>
-      <div class="checkbox-group">
-        <div class="checkbox-row"><input type="checkbox" checked id="p1"> Acesso total Master Control</div>
-        <div class="checkbox-row"><input type="checkbox" checked id="p2"> Gestão de Licenças e Empresas</div>
-        <div class="checkbox-row"><input type="checkbox" checked id="p3"> Bloqueio e Liberação de Acessos</div>
-        <div class="checkbox-row"><input type="checkbox" id="p4"> Suporte a Relatórios Financeiros</div>
+      <span class="input-label">Permissões e Funções Liberadas:</span>
+      <div class="checkbox-group" id="permBoxes">
+        <div class="checkbox-row"><input type="checkbox" id="p1" checked> Acesso ao Master Control</div>
+        <div class="checkbox-row"><input type="checkbox" id="p2" checked> Cadastrar e Gerenciar Licenças SaaS</div>
+        <div class="checkbox-row"><input type="checkbox" id="p3" checked> Bloquear / Liberar Empresas</div>
+        <div class="checkbox-row"><input type="checkbox" id="p4" checked> Suporte e Configuração de Gestores</div>
+        <div class="checkbox-row"><input type="checkbox" id="p5"> Visualização de Relatórios Globais</div>
       </div>
 
       <button class="btn-action" onclick="cadastrarMembroCompleto()">+ Cadastrar Operador Control</button>
@@ -99,24 +103,34 @@
   </div>
 
   <script>
+    function updateRoleCheckboxes(val) {
+      document.getElementById('p1').checked = (val === 'Master');
+      document.getElementById('p2').checked = (val === 'Master' || val === 'Gerente');
+      document.getElementById('p3').checked = (val === 'Master' || val === 'Gerente');
+      document.getElementById('p4').checked = true;
+      document.getElementById('p5').checked = (val === 'Master');
+    }
+
     function cadastrarMembroCompleto() {
       var name = document.getElementById('jName').value.trim();
+      var cargo = document.getElementById('jCargo').value.trim();
       var phone = document.getElementById('jPhone').value.trim();
       var role = document.getElementById('jRole').value;
 
-      if (!name || !phone) return alert('Preencha o Nome e o Telefone.');
+      if (!name || !phone) return alert('Preencha o Nome Completo e o Telefone.');
 
       var container = document.getElementById('jhovisMemberList');
       var div = document.createElement('div');
       div.className = 'member-item';
-      div.innerHTML = '<div><strong>' + name + '</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(' + role + ')</span><div style="font-size:0.72rem; color:var(--primary);">' + phone + '</div></div><span class="status-offline">○ Off-line</span>';
+      div.innerHTML = '<div><strong>' + name + '</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(' + role + ' - ' + cargo + ')</span><div style="font-size:0.72rem; color:var(--primary);">' + phone + '</div></div><span class="status-offline">○ Off-line</span>';
       container.appendChild(div);
 
-      // LIMPEZA AUTOMÁTICA DOS CAMPOS
+      // Limpeza automática das caixas após cadastrar
       document.getElementById('jName').value = '';
+      document.getElementById('jCargo').value = '';
       document.getElementById('jPhone').value = '';
 
-      alert('Colaborador cadastrado com sucesso!');
+      alert('Colaborador da Jhovis Tecnologia cadastrado com sucesso!');
     }
   </script>
 </body>
