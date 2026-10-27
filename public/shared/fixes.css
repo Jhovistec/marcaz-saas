@@ -1,0 +1,21 @@
+/* Marcaz — ajustes finos compartilhados */
+
+/* Ícone do calendário/relógio nativo dos inputs de data e hora: sempre claro,
+   independente do tema da empresa (antes sumia no fundo escuro). */
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(2.2);
+  opacity: 0.95;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 6px;
+}
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--prim) 25%, transparent);
+}
+/* Firefox / navegadores sem o pseudo-elemento: deixa o campo clicável e legível */
+input[type='date'], input[type='time'] { color-scheme: dark; }

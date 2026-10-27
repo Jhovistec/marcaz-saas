@@ -1,0 +1,25 @@
+{
+  "name": "marcaz",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Marcaz - SaaS de agendamento multi-tenant (Jhovis Tecnologia)",
+  "type": "module",
+  "main": "server/index.js",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "start": "node --experimental-sqlite server/index.js",
+    "dev": "node --watch --experimental-sqlite server/index.js",
+    "seed": "node server/seed.js",
+    "db:init": "node --experimental-sqlite -e \"import('./server/db.js').then(async m=>{await m.conectar();console.log('schema criado')})\""
+  },
+  "dependencies": {
+    "chart.js": "^4.6.1",
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1"
+  }
+}
