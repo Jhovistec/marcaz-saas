@@ -80,20 +80,52 @@ router.post('/cliente/cadastro', async (req, res) => {
   res.status(201).json({ usuario: publico(u) });
 });
 
+// Empresas ativas (só nome e link) — o painel usa para montar o seletor.
+router.get('/empresas', async (_req, res) => {
+  const lista = await db
+    .prepare(`SELECT slug, nome, segmento FROM empresas WHERE status = 'ativa' ORDER BY nome`)
+    .all();
+  res.json({ empresas: lista });
+});
+
 // Login do painel (gestor) — telefone ou e-mail + senha, preso à empresa do link
 router.post('/painel/login', async (req, res) => {
   const { empresa, login, senha } = req.body || {};
-  const emp = await db.prepare('SELECT * FROM empresas WHERE slug = ?').get(empresa);
-  if (!emp) return res.status(404).json({ erro: 'Estabelecimento não encontrado.' });
-
   const ident = String(login || '').trim();
   const tel = normTel(ident);
-  const u = await db
-    .prepare(
-      `SELECT * FROM usuarios WHERE empresa_id = ? AND papel IN ('dono','funcionario')
-       AND (telefone = ? OR lower(email) = lower(?)) LIMIT 1`
-    )
-    .get(emp.id, tel, ident);
+
+  let emp = null;
+  let u = null;
+
+  if (empresa) {
+    emp = await db.prepare('SELECT * FROM empresas WHERE slug = ?').get(empresa);
+    if (!emp) return res.status(404).json({ erro: 'Estabelecimento não encontrado.' });
+    u = await db
+      .prepare(
+        `SELECT * FROM usuarios WHERE empresa_id = ? AND papel IN ('dono','funcionario')
+         AND (telefone = ? OR lower(email) = lower(?)) LIMIT 1`
+      )
+      .get(emp.id, tel, ident);
+  } else {
+    // sem escolher a empresa: o telefone/e-mail de acesso define a empresa
+    const candidatos = await db
+      .prepare(
+        `SELECT us.*, e.slug, e.nome AS empresa_nome, e.status AS empresa_status
+         FROM usuarios us JOIN empresas e ON e.id = us.empresa_id
+         WHERE us.papel IN ('dono','funcionario') AND (us.telefone = ? OR lower(us.email) = lower(?))`
+      )
+      .all(tel, ident);
+    if (!candidatos.length) return res.status(401).json({ erro: 'Usuário ou senha incorretos.' });
+    if (candidatos.length > 1) {
+      return res.status(409).json({
+        erro: 'Este acesso pertence a mais de um estabelecimento. Escolha qual abaixo.',
+        empresas: candidatos.map((c) => ({ slug: c.slug, nome: c.empresa_nome })),
+      });
+    }
+    const c = candidatos[0];
+    emp = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(c.empresa_id);
+    u = c;
+  }
 
   if (!u || !verificaSenha(senha, u.senha_hash)) {
     return res.status(401).json({ erro: 'Usuário ou senha incorretos.' });

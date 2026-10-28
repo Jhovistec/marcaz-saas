@@ -150,6 +150,10 @@ function blocoFila() {
   const agora = new Date();
   const passou = minutosDaHora(atual.hora) <= agora.getHours() * 60 + agora.getMinutes();
   if (!passou) return caixa;
+  // a visita pode ter mais de um serviço marcado junto
+  const nomeServicos = atual.servicos && atual.servicos.length > 1
+    ? atual.servicos.join(' + ')
+    : atual.servico;
 
   const botaoSim = el('button', { class: 'btn btn-mini', type: 'button' }, 'Sim');
   const botaoNao = el('button', { class: 'btn btn-fantasma btn-mini', type: 'button' }, 'Não');
@@ -174,6 +178,7 @@ function blocoFila() {
       await carregarFila();
       telaPainel();
     } catch (e) {
+      if (trataSessao(e)) return;
       alert(e.message);
       botaoSim.disabled = false;
     }
@@ -232,7 +237,21 @@ function abrirAvisoAtraso(minutos) {
   setTimeout(() => document.getElementById('modalAtraso')?.remove(), 9000);
 }
 
-/* ============================ arranque ============================ */
+/* Sessão expirada: em vez de deixar o botão "sem resposta", volta para o login
+   e repete a ação depois que a pessoa entrar de novo. */
+function trataSessao(e) {
+  if (e && e.status === 401) {
+    S.contexto = null;
+    if (S.timer) clearInterval(S.timer);
+    if (S.timerNotif) clearInterval(S.timerNotif);
+    avisoSessao = true;
+    telaLogin();
+    return true;
+  }
+  return false;
+}
+let avisoSessao = false;
+
 async function iniciar() {
   try {
     S.contexto = await get('/api/gestor/contexto');
@@ -251,11 +270,17 @@ async function iniciar() {
   }, 25000);
 }
 
+async function listaEmpresasLogin() {
+  try {
+    const r = await get('/api/auth/empresas');
+    if (Array.isArray(r.empresas) && r.empresas.length) return r.empresas.map((e) => [e.slug, e.nome]);
+  } catch { /* sem conexão: usa as de demonstração */ }
+  return Object.entries(NOMES_EMPRESA);
+}
+
 function telaLogin() {
   const alerta = el('div', { class: 'alerta' });
-  const slug = el('select', {},
-    Object.entries(NOMES_EMPRESA).map(([v, r]) => el('option', { value: v }, r))
-  );
+  const slug = el('select', {}, el('option', { value: '' }, 'Carregando…'));
   const login = el('input', { placeholder: 'Telefone ou e-mail', autocomplete: 'username' });
   const senha = el('input', { type: 'password', placeholder: 'Sua senha', autocomplete: 'current-password' });
   login.addEventListener('input', () => {
@@ -263,6 +288,14 @@ function telaLogin() {
     login.value = mascaraTelefone(login.value);
   });
   const botao = el('button', { class: 'btn btn-bloco', type: 'submit' }, 'Entrar no painel');
+  listaEmpresasLogin().then((opcoes) => {
+    slug.replaceChildren(el('option', { value: '' }, 'Detectar pelo meu login'),
+      ...opcoes.map(([v, r]) => el('option', { value: v }, r)));
+  });
+  if (avisoSessao) {
+    aviso(alerta, 'info', 'Sua sessão expirou. Entre de novo para continuar — nada foi perdido.');
+    avisoSessao = false;
+  }
 
   const form = el('form', {
     onsubmit: async (ev) => {
@@ -271,10 +304,19 @@ function telaLogin() {
       botao.disabled = true;
       botao.textContent = 'Entrando…';
       try {
-        await post('/api/auth/painel/login', { empresa: slug.value, login: login.value, senha: senha.value });
+        await post('/api/auth/painel/login', { empresa: slug.value || undefined, login: login.value, senha: senha.value });
         await iniciar();
       } catch (e) {
-        aviso(alerta, 'erro', e.message);
+          if (trataSessao(e)) return;
+          // o mesmo telefone pode pertencer a mais de um estabelecimento (redes/filiais):
+          // a resposta traz a lista e oferecemos a escolha na hora
+          if (e.dados && Array.isArray(e.dados.empresas)) {
+            slug.replaceChildren(
+              el('option', { value: '' }, 'Escolha o estabelecimento'),
+              ...e.dados.empresas.map((x) => el('option', { value: x.slug }, x.nome))
+            );
+          }
+          aviso(alerta, 'erro', e.message);
         botao.disabled = false;
         botao.textContent = 'Entrar no painel';
       }
@@ -361,7 +403,9 @@ function telaPainel() {
     agenda: abaAgenda, servicos: abaServicos, promocoes: abaPromocoes, equipe: abaEquipe,
     clientes: abaClientes, horarios: abaHorarios, financeiro: abaFinanceiro, avisos: abaAvisos,
   }[S.aba];
-  render(alvo);
+  // se a sessão caiu enquanto a pessoa estava na tela, a aba devolve 401:
+  // mandamos de volta ao login com aviso, em vez de deixar o botão sem efeito.
+  Promise.resolve(render(alvo)).catch((e) => { if (!trataSessao(e)) console.error(e); });
 
   if (S.timer) clearInterval(S.timer);
   if (S.aba === 'agenda') {
@@ -542,6 +586,7 @@ async function modalNovoAgendamento() {
           await carregarAgenda();
           telaPainel();
         } catch (e) {
+          if (trataSessao(e)) return;
           aviso(alerta, 'erro', e.message);
           ev.currentTarget.disabled = false;
         }
@@ -584,6 +629,7 @@ async function abaServicos(alvo) {
           });
           telaPainel();
         } catch (e) {
+          if (trataSessao(e)) return;
           aviso(alerta, 'erro', e.message);
           ev.currentTarget.disabled = false;
         }
@@ -611,14 +657,14 @@ async function abaServicos(alvo) {
               const novo = prompt('Novo preço (ex.: 45,00):', (s.preco_cent / 100).toFixed(2).replace('.', ','));
               if (novo === null) return;
               try { await put(`/api/gestor/servicos/${s.id}`, { preco_cent: brlParaCentavos(novo) }); telaPainel(); }
-              catch (e) { alert(e.message); }
+              catch (e) { if (!trataSessao(e)) alert(e.message); }
             },
           }, 'Preço'),
           el('button', {
             class: 'btn btn-fantasma btn-mini', type: 'button',
             onclick: async () => {
               try { await put(`/api/gestor/servicos/${s.id}`, { ativo: !s.ativo }); telaPainel(); }
-              catch (e) { alert(e.message); }
+              catch (e) { if (!trataSessao(e)) alert(e.message); }
             },
           }, s.ativo ? 'Desativar' : 'Ativar'),
           el('button', {
@@ -629,7 +675,7 @@ async function abaServicos(alvo) {
                 const r = await del(`/api/gestor/servicos/${s.id}`);
                 if (r.aviso) alert(r.aviso);
                 telaPainel();
-              } catch (e) { alert(e.message); }
+              } catch (e) { if (!trataSessao(e)) alert(e.message); }
             },
           }, 'Excluir')
         )
@@ -689,6 +735,7 @@ async function abaPromocoes(alvo) {
           });
           telaPainel();
         } catch (e) {
+          if (trataSessao(e)) return;
           aviso(alerta, 'erro', e.message);
           ev.currentTarget.disabled = false;
         }
@@ -768,6 +815,7 @@ async function abaEquipe(alvo) {
           });
           telaPainel();
         } catch (e) {
+          if (trataSessao(e)) return;
           aviso(alerta, 'erro', e.message);
           ev.currentTarget.disabled = false;
         }
@@ -792,7 +840,7 @@ async function abaEquipe(alvo) {
             class: 'btn btn-fantasma btn-mini', type: 'button',
             onclick: async () => {
               try { await put(`/api/gestor/equipe/${u.id}`, { ativo: !u.ativo }); telaPainel(); }
-              catch (e) { alert(e.message); }
+              catch (e) { if (!trataSessao(e)) alert(e.message); }
             },
           }, u.ativo ? 'Desativar' : 'Ativar'),
           el('button', {
@@ -803,7 +851,7 @@ async function abaEquipe(alvo) {
                 const r = await del(`/api/gestor/equipe/${u.id}`);
                 if (r.aviso) alert(r.aviso);
                 telaPainel();
-              } catch (e) { alert(e.message); }
+              } catch (e) { if (!trataSessao(e)) alert(e.message); }
             },
           }, 'Remover')
         )
