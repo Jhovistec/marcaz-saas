@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import pgMod from 'pg';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -241,7 +242,7 @@ function opcoesSsl() {
 }
 
 async function criarPostgres() {
-  const { default: pg } = await import('pg');
+  const pg = pgMod;
   pg.types.setTypeParser(20, (v) => parseInt(v, 10)); // int8 (COUNT/SUM)
   pg.types.setTypeParser(1700, (v) => parseFloat(v)); // numeric
 

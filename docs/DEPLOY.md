@@ -7,8 +7,9 @@ Dois bancos, mesmo código:
 | Desenvolvimento | SQLite (`data/marcaz.db`) | `npm start` — nada a configurar |
 | Produção | PostgreSQL (Supabase) | `MARCAZ_DB=postgres` + `DATABASE_URL` |
 
-Repositório do código: **github.com/Jhovistec/marcaz-saas**, branch **`marcaz-v1`**
-(a `main` ainda é o protótipo antigo, que não grava nada).
+Repositório do código: **github.com/Jhovistec/marcaz-saas**.
+A branch **`main` já é o app definitivo** (subida em 28/10). `marcaz-v1` é a cópia de
+segurança e `legado-gemini-prototipo` guarda o protótipo antigo, que não gravava nada.
 
 Banco de produção já criado e testado: projeto Supabase **`marcaz`**, 8 tabelas com
 RLS ativado, 3 empresas de demonstração.
@@ -19,8 +20,9 @@ RLS ativado, 3 empresas de demonstração.
 
 1. Abra `vercel.com` → **+ Create New** (canto superior direito) → **Project** →
    **Import Repository** → **Import** ao lado de `Jhovistec/marcaz-saas`.
-2. **Branch: `marcaz-v1`** ← isso é o passo mais importante: se ficar `main`,
-   a Vercel publica o app velho da Gemini.
+2. **Branch**: pode deixar **`main`** — ela já tem o código novo. O seletor de branch
+   fica na tela seguinte (*Configure Project*), como um menu suspenso ao lado do nome do
+   repositório (só aparece depois de autorizar o acesso ao GitHub, que é a tela atual).
 3. **Framework Preset: Other**. Deixe *Build Command* e *Output Directory* vazios.
 4. Abra **Environment Variables** e preencha (marque *Production* e *Preview*):
 
@@ -67,7 +69,7 @@ No projeto: **Settings → Domains** → adicione `marcaz.com.br` ou
 
 | Erro | Solução |
 |---|---|
-| `Cannot find module './server/index.js'` | Confira se o branch é `marcaz-v1` e se *Build Command* está vazio. |
+| `Cannot find module './server/index.js'` | Confira se o branch é `main` (ou `marcaz-v1`) e se *Build Command* está vazio. |
 | `relation "empresas" does not exist` | Rode o `docs/schema.sql` no SQL Editor do Supabase de novo. |
 | `self-signed certificate` / timeout | `MARCAZ_PG_SSL=no-verify` e porta **5432** (direta). |
 | Telas em branco / CSS 404 | É o build antigo: faça *Redeploy* do último commit. |

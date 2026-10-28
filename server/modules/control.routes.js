@@ -1,7 +1,7 @@
 // Marcaz Control — painel da Jhovis. Só papel master.
 import express from 'express';
 import { db } from '../db.js';
-import { exigePapel, hashSenha } from '../auth.js';
+import { exigePapel, exigeIdNumerico, hashSenha } from '../auth.js';
 import { hojeISO } from '../lib/agenda.js';
 import { normalizaDiasAgenda } from '../lib/janela.js';
 
@@ -88,7 +88,7 @@ router.get('/empresas/:id', async (req, res) => {
   res.json({ empresa: e, dono: dono || null });
 });
 
-router.put('/empresas/:id', async (req, res) => {
+router.put('/empresas/:id', exigeIdNumerico, async (req, res) => {
   const e = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(req.params.id);
   if (!e) return res.status(404).json({ erro: 'Empresa não encontrada.' });
   const b = req.body || {};
@@ -146,7 +146,7 @@ router.put('/empresas/:id', async (req, res) => {
   res.json({ ok: true, empresa: await db.prepare('SELECT * FROM empresas WHERE id = ?').get(e.id) });
 });
 
-router.patch('/empresas/:id/status', async (req, res) => {
+router.patch('/empresas/:id/status', exigeIdNumerico, async (req, res) => {
   const { status } = req.body || {};
   if (!['ativa', 'bloqueada'].includes(status)) return res.status(400).json({ erro: 'Status inválido.' });
   const e = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(req.params.id);
@@ -155,7 +155,7 @@ router.patch('/empresas/:id/status', async (req, res) => {
   res.json({ ok: true });
 });
 
-router.patch('/empresas/:id/assinatura', async (req, res) => {
+router.patch('/empresas/:id/assinatura', exigeIdNumerico, async (req, res) => {
   const { plano, vence_em } = req.body || {};
   const e = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(req.params.id);
   if (!e) return res.status(404).json({ erro: 'Empresa não encontrada.' });
@@ -167,7 +167,7 @@ router.patch('/empresas/:id/assinatura', async (req, res) => {
   res.json({ ok: true });
 });
 
-router.post('/empresas/:id/reset-senha', async (req, res) => {
+router.post('/empresas/:id/reset-senha', exigeIdNumerico, async (req, res) => {
   const { senha } = req.body || {};
   if (!senha || String(senha).length < 4) return res.status(400).json({ erro: 'Senha muito curta.' });
   const e = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(req.params.id);
@@ -205,7 +205,7 @@ router.post('/equipe', async (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid });
 });
 
-router.put('/equipe/:id', async (req, res) => {
+router.put('/equipe/:id', exigeIdNumerico, async (req, res) => {
   const u = await db.prepare(`SELECT * FROM usuarios WHERE id = ? AND papel='master'`).get(req.params.id);
   if (!u) return res.status(404).json({ erro: 'Operador não encontrado.' });
   if (u.id === req.usuario.id) return res.status(400).json({ erro: 'Você não pode alterar o próprio acesso.' });

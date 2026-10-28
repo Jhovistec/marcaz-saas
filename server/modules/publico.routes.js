@@ -1,7 +1,7 @@
 // Rotas públicas da PWA do cliente. O tenant vem SEMPRE do slug do link.
 import express from 'express';
 import { db } from '../db.js';
-import { exigeLogin } from '../auth.js';
+import { exigeLogin, exigeIdNumerico } from '../auth.js';
 import {
   hojeISO,
   slotsDisponiveis,
@@ -190,7 +190,7 @@ router.post('/agendamentos', exigeLogin, async (req, res) => {
 });
 
 // Cancelar (cliente) — trava de 15 minutos
-router.post('/agendamentos/:id/cancelar', exigeLogin, async (req, res) => {
+router.post('/agendamentos/:id/cancelar', exigeLogin, exigeIdNumerico, async (req, res) => {
   const u = req.usuario;
   const ag = await db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(req.params.id);
   if (!ag || ag.cliente_id !== u.id) return res.status(404).json({ erro: 'Agendamento não encontrado.' });

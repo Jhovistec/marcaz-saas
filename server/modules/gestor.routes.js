@@ -1,7 +1,7 @@
 // Painel do gestor. Toda rota exige sessão de dono/funcionário e usa a empresa do token.
 import express from 'express';
 import { db } from '../db.js';
-import { exigeLogin, exigePermissao, hashSenha } from '../auth.js';
+import { exigeLogin, exigePermissao, exigeIdNumerico, hashSenha } from '../auth.js';
 import {
   hojeISO,
   slotsDisponiveis,
@@ -124,7 +124,7 @@ router.post('/agenda', exigePermissao('agenda'), async (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid });
 });
 
-router.post('/agenda/:id/status', exigePermissao('agenda'), async (req, res) => {
+router.post('/agenda/:id/status', exigePermissao('agenda'), exigeIdNumerico, async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   const { status } = req.body || {};
@@ -180,7 +180,7 @@ router.get('/fila', exigePermissao('agenda'), async (req, res) => {
 });
 
 // "Cliente finalizado?" → Sim
-router.post('/agenda/:id/finalizar', exigePermissao('agenda'), async (req, res) => {
+router.post('/agenda/:id/finalizar', exigePermissao('agenda'), exigeIdNumerico, async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   const ag = await db.prepare('SELECT * FROM agendamentos WHERE id = ? AND empresa_id = ?').get(req.params.id, e.id);
@@ -190,7 +190,7 @@ router.post('/agenda/:id/finalizar', exigePermissao('agenda'), async (req, res) 
 });
 
 // "Cliente finalizado?" → Não, com 10 ou 15 minutos de atraso
-router.post('/agenda/:id/atrasar', exigePermissao('agenda'), async (req, res) => {
+router.post('/agenda/:id/atrasar', exigePermissao('agenda'), exigeIdNumerico, async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   const minutosAtraso = [10, 15].includes(Number(req.body?.minutos)) ? Number(req.body.minutos) : 10;
@@ -248,7 +248,7 @@ router.post('/servicos', exigePermissao('servicos'), async (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid });
 });
 
-router.put('/servicos/:id', exigePermissao('servicos'), async (req, res) => {
+router.put('/servicos/:id', exigePermissao('servicos'), exigeIdNumerico, async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   const s = await db.prepare('SELECT * FROM servicos WHERE id = ? AND empresa_id = ?').get(req.params.id, e.id);
@@ -264,7 +264,7 @@ router.put('/servicos/:id', exigePermissao('servicos'), async (req, res) => {
   res.json({ ok: true });
 });
 
-router.delete('/servicos/:id', exigePermissao('servicos'), async (req, res) => {
+router.delete('/servicos/:id', exigePermissao('servicos'), exigeIdNumerico, async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   const s = await db.prepare('SELECT * FROM servicos WHERE id = ? AND empresa_id = ?').get(req.params.id, e.id);
@@ -321,7 +321,7 @@ router.post('/promocoes', exigePermissao('servicos'), async (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid });
 });
 
-router.patch('/promocoes/:id/toggle', exigePermissao('servicos'), async (req, res) => {
+router.patch('/promocoes/:id/toggle', exigePermissao('servicos'), exigeIdNumerico, async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   const p = await db.prepare('SELECT * FROM promocoes WHERE id = ? AND empresa_id = ?').get(req.params.id, e.id);
@@ -330,7 +330,7 @@ router.patch('/promocoes/:id/toggle', exigePermissao('servicos'), async (req, re
   res.json({ ativo: !p.ativo });
 });
 
-router.delete('/promocoes/:id', exigePermissao('servicos'), async (req, res) => {
+router.delete('/promocoes/:id', exigePermissao('servicos'), exigeIdNumerico, async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   await db.prepare('DELETE FROM promocoes WHERE id = ? AND empresa_id = ?').run(req.params.id, e.id);
@@ -373,7 +373,7 @@ router.post('/equipe', exigePermissao('equipe'), async (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid });
 });
 
-router.put('/equipe/:id', exigePermissao('equipe'), async (req, res) => {
+router.put('/equipe/:id', exigePermissao('equipe'), exigeIdNumerico, async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   if (req.usuario.papel !== 'dono') return res.status(403).json({ erro: 'Só o dono altera a equipe.' });
@@ -396,7 +396,7 @@ router.put('/equipe/:id', exigePermissao('equipe'), async (req, res) => {
   res.json({ ok: true });
 });
 
-router.delete('/equipe/:id', exigePermissao('equipe'), async (req, res) => {
+router.delete('/equipe/:id', exigePermissao('equipe'), exigeIdNumerico, async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   if (req.usuario.papel !== 'dono') return res.status(403).json({ erro: 'Só o dono remove a equipe.' });
