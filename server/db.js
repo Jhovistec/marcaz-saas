@@ -275,7 +275,29 @@ function opcoesSsl() {
   return { rejectUnauthorized: false };
 }
 
+/**
+ * A Vercel (e o GitHub Actions) só fala IPv4. O endereço "db.<projeto>.supabase.co"
+ * existe apenas em IPv6, então a conexão nunca vai fechar. Avisamos antes de perder
+ * tempo com timeout.
+ */
+export function urlIncompativelComIPv4(url) {
+  const u = limpaUrlDoBanco(url || '');
+  if (!u) return null;
+  let host = '';
+  try {
+    host = new URL(u).hostname;
+  } catch {
+    return null;
+  }
+  if (/^db\.[a-z0-9]+\.supabase\.co$/i.test(host)) {
+    return 'Esta DATABASE_URL usa o endereço direto do Supabase (db.<projeto>.supabase.co), que só existe em IPv6. Hosts IPv4-only, como a Vercel, não conseguem conectar. Use a string do Connection pooling (host aws-0-<regiao>.pooler.supabase.com).';
+  }
+  return null;
+}
+
 async function criarPostgres() {
+  const incompativel = urlIncompativelComIPv4(process.env.DATABASE_URL);
+  if (incompativel) throw new Error(incompativel);
   const pg = pgMod;
   pg.types.setTypeParser(20, (v) => parseInt(v, 10)); // int8 (COUNT/SUM)
   pg.types.setTypeParser(1700, (v) => parseFloat(v)); // numeric
