@@ -7,59 +7,78 @@ Dois bancos, mesmo código:
 | Desenvolvimento | SQLite (`data/marcaz.db`) | `npm start` — nada a configurar |
 | Produção | PostgreSQL (Supabase) | `MARCAZ_DB=postgres` + `DATABASE_URL` |
 
-## A. Supabase (banco de dados)
+Repositório do código: **github.com/Jhovistec/marcaz-saas**, branch **`marcaz-v1`**
+(a `main` ainda é o protótipo antigo, que não grava nada).
 
-1. Acesse **supabase.com** → *New project*
-   - Nome: `marcaz`
-   - Senha do banco: gere uma forte e **anote** (vai para as variáveis de ambiente)
-   - Region: **São Paulo (sa-east-1)**
-2. No projeto: **Project Settings → Database** → *Connection string*.
-   Copie a linha do **connection pooling** (porta **6543**):
-   `postgresql://postgres.xxxxx:SENHA@aws-0-sa-east-1.pooler.supabase.com:6543/postgres`
-   Se der erro de conexão, use a *Direct connection* (porta **5432**).
-3. Crie as tabelas — **SQL Editor** → *New query* → cole o conteúdo de
-   `docs/schema.sql` → **Run**. (Ou, com as variáveis no ambiente, `npm run db:init`.)
-4. Os dados de demonstração entram sozinhos na primeira execução, apenas se o banco
-   estiver vazio. Depois de criar suas empresas reais, pode desativar o seed.
+Banco de produção já criado e testado: projeto Supabase **`marcaz`**, 8 tabelas com
+RLS ativado, 3 empresas de demonstração.
 
-## B. Vercel (aplicação no ar)
+---
 
-1. Crie um repositório no GitHub com a pasta `marcaz` (sem `node_modules` e sem `data`).
-2. **vercel.com** → *Add New → Project* → importe o repositório.
-3. *Framework Preset*: **Other**. Build command: vazio. Output directory: vazio.
-4. **Environment Variables** (marque Production e Preview):
+## A. Conectar o projeto novo na Vercel (só cliques)
+
+1. Abra `vercel.com` → **+ Create New** (canto superior direito) → **Project** →
+   **Import Repository** → **Import** ao lado de `Jhovistec/marcaz-saas`.
+2. **Branch: `marcaz-v1`** ← isso é o passo mais importante: se ficar `main`,
+   a Vercel publica o app velho da Gemini.
+3. **Framework Preset: Other**. Deixe *Build Command* e *Output Directory* vazios.
+4. Abra **Environment Variables** e preencha (marque *Production* e *Preview*):
 
 | Nome | Valor |
 |---|---|
 | `MARCAZ_DB` | `postgres` |
-| `DATABASE_URL` | a string copiada do Supabase |
+| `DATABASE_URL` | `postgresql://postgres:6NFJZ1baAi29PziA@db.eppvckcfdubytvoscjfs.supabase.co:5432/postgres` |
 | `MARCAZ_PG_SSL` | `no-verify` |
-| `MARCAZ_SEGREDO` | uma string longa e aleatória (ex.: 40 caracteres) |
+| `MARCAZ_SEGREDO` | `4cb19759590c8f9bb9db4592bb4e10c7c7864608ed115f1d9a7cbd8ac3f65781` |
 
-5. **Deploy**. A Vercel devolve um endereço, ex.: `https://marcaz.vercel.app`.
-6. Telas:
-   - Cliente: `https://SEU-ENDERECO/barbearia-noel`
-   - Gestor: `https://SEU-ENDERECO/gestor`
-   - Control: `https://SEU-ENDERECO/control`
+5. **Deploy**. Em ~1 minuto aparece o domínio de produção.
+6. Se o projeto antigo `marcaz-saas` (o protótipo da Gemini) incomodar, pode
+   deletá-lo depois de conferir que o novo está no ar: *Settings → General → Delete*.
 
-Cada empresa criada no Control ganha seu próprio link `/{slug}` — é esse link que o
-empresário divulga no Instagram, no WhatsApp e no Google.
+## B. Testar no ar
 
-## C. Domínio próprio (recomendado para vender)
+Troque `SEU-DOMINIO` pelo endereço que a Vercel der:
 
-Na Vercel: *Settings → Domains* → adicione `marcaz.com.br` ou um subdomínio seu
-(ex.: `app.jhovis.com.br`). Aponte o DNS conforme a própria Vercel mostra. O HTTPS
-é automático e gratuito.
+| Tela | Endereço | Login |
+|---|---|---|
+| Cliente (barbearia) | `https://SEU-DOMINIO/barbearia-noel` | `(38) 99999-4444` / `cliente123` |
+| Cliente (salão) | `https://SEU-DOMINIO/salao-divas` | `(38) 99888-4444` / `cliente123` |
+| Cliente (estética) | `https://SEU-DOMINIO/studio-plena` | `(38) 99777-5555` / `cliente123` |
+| Gestor | `https://SEU-DOMINIO/gestor` | `(38) 99999-1111` / `dono123` |
+| Control | `https://SEU-DOMINIO/control` | `master@jhovis.com.br` / `master123` |
 
-## D. Segurança que já existe
+Rodei um teste de ponta a ponta com **28 verificações** (cadastro, agendamento,
+conflito, cancelamento, cliente avulso, atraso, promoção, permissões, RLS,
+edição de empresa no Control) — 28/28 passaram no SQLite e no Supabase.
 
-- Senhas com hash scrypt + sal — nunca em texto puro.
-- Sessão em cookie `httpOnly` assinado (HMAC), validade de 7 dias.
-- Isolamento por empresa: o `empresa_id` vem do link/token, nunca do que o navegador envia.
-- Rotas de painel exigem papel + permissão; as do Control exigem `master`.
+## C. Como entregar para cada cliente
 
-## E. O que ainda não está no ar
+No Control, clique **+ Nova empresa / licença**, preencha nome, segmento e o
+proprietário. O sistema devolve o link (`/{slug}`) — é esse link que o
+empresário coloca no Instagram e no WhatsApp. A senha inicial é a que você definir
+na criação; o dono troca depois no próprio painel.
 
-- Push/WhatsApp automático (o botão do WhatsApp já abre a conversa pelo `api.whatsapp.com`).
-- Upload de logo por arquivo (hoje se define por URL, no Gestor e no Control).
-- Backup agendado do banco (o plano grátis do Supabase não faz backup automático).
+## D. Domínio próprio (recomendado para vender)
+
+No projeto: **Settings → Domains** → adicione `marcaz.com.br` ou
+`app.jhovis.com.br`. Aponte o DNS conforme a Vercel mostra. HTTPS automático.
+
+## E. Se der erro na Vercel
+
+| Erro | Solução |
+|---|---|
+| `Cannot find module './server/index.js'` | Confira se o branch é `marcaz-v1` e se *Build Command* está vazio. |
+| `relation "empresas" does not exist` | Rode o `docs/schema.sql` no SQL Editor do Supabase de novo. |
+| `self-signed certificate` / timeout | `MARCAZ_PG_SSL=no-verify` e porta **5432** (direta). |
+| Telas em branco / CSS 404 | É o build antigo: faça *Redeploy* do último commit. |
+| Projeto Supabase pausado | No Supabase, **Restore project** (o plano FREE pausa por inatividade). |
+
+## F. Variáveis no computador
+
+`config.env` (não vai para o Git) guarda o mesmo par para rodar local contra o
+Supabase:
+
+```bash
+node --env-file=config.env server/index.js   # app local usando o banco da nuvem
+node --env-file=config.env server/testa-banco.js   # só confere a conexão
+```
