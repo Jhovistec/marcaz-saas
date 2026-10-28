@@ -313,10 +313,10 @@ router.post('/promocoes', exigePermissao('servicos'), async (req, res) => {
   const info = await db
     .prepare('INSERT INTO promocoes (empresa_id, titulo, desconto_pct, inicio, fim) VALUES (?,?,?,?,?)')
     .run(e.id, String(titulo).trim(), Math.round(pct), inicio, fim);
-  const addItem = await db.prepare('INSERT INTO promocao_itens (promocao_id, servico_id) VALUES (?,?)');
+  const addItem = db.prepare('INSERT INTO promocao_itens (promocao_id, servico_id) VALUES (?,?)');
   for (const id of ids) {
     const s = await db.prepare('SELECT id FROM servicos WHERE id = ? AND empresa_id = ?').get(id, e.id);
-    if (s) addItem.run(info.lastInsertRowid, s.id);
+    if (s) await addItem.run(info.lastInsertRowid, s.id);
   }
   res.status(201).json({ id: info.lastInsertRowid });
 });
@@ -508,8 +508,8 @@ router.post('/notificacoes/lidas', async (req, res) => {
   if (!e) return;
   const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number) : null;
   if (ids && ids.length) {
-    const marca = await db.prepare('UPDATE notificacoes SET lida = 1 WHERE id = ? AND empresa_id = ?');
-    for (const id of ids) marca.run(id, e.id);
+    const marca = db.prepare('UPDATE notificacoes SET lida = 1 WHERE id = ? AND empresa_id = ?');
+    for (const id of ids) await marca.run(id, e.id);
   } else {
     await db.prepare('UPDATE notificacoes SET lida = 1 WHERE empresa_id = ? AND (usuario_id = ? OR usuario_id IS NULL)')
       .run(e.id, req.usuario.id);

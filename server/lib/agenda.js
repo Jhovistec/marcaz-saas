@@ -56,13 +56,19 @@ export async function slotsDisponiveis({ empresa, data, duracaoMin = 30, profiss
   }
   if (data < hojeISO(agora)) return [];
 
+  // O filtro por profissional é montado à parte: no Postgres um parâmetro em
+  // "(? IS NULL OR …)" não tem tipo deduzível e a consulta falha.
+  const filtros = ['empresa_id = ?', 'data = ?', "status <> 'cancelado'"];
+  const args = [empresa.id, data];
+  if (profissionalId) {
+    filtros.push('profissional_id = ?');
+    args.push(profissionalId);
+  }
   const ocupados = await db
     .prepare(
-      `SELECT hora, duracao_min, profissional_id FROM agendamentos
-       WHERE empresa_id = ? AND data = ? AND status <> 'cancelado'
-         AND (? IS NULL OR profissional_id = ?)`
+      `SELECT hora, duracao_min, profissional_id FROM agendamentos WHERE ${filtros.join(' AND ')}`
     )
-    .all(empresa.id, data, profissionalId, profissionalId);
+    .all(...args);
 
   const livres = [];
   for (let m = abertura; m + duracaoMin <= fechamento; m += passo) {
