@@ -464,9 +464,20 @@ function linhaResumoBloco() {
   );
 }
 
+/**
+ * Repinta as três seções que dependem uma da outra (serviços, equipe, horários).
+ * Antes só serviços e horários eram trocados: o cartão da equipe ficava com a
+ * marcação antiga e a escolha do profissional não aparecia na tela.
+ */
 function atualizarSecaoServicos() {
-  const alvo = document.getElementById('blocoServicos');
-  if (alvo) alvo.replaceWith(blocoServicos());
+  const s = document.getElementById('blocoServicos');
+  if (s) s.replaceWith(blocoServicos());
+  const pr = document.getElementById('blocoProfissionais');
+  if (pr) {
+    const novo = blocoProfissionais();
+    if (novo) pr.replaceWith(novo);
+    else pr.remove();
+  }
   const h = document.getElementById('blocoHorarios');
   if (h) h.replaceWith(blocoHorarios());
   atualizarBarra();
@@ -517,6 +528,7 @@ function blocoProfissionais() {
       el('div', { class: 'cargo' }, p.cargo || 'Profissional')
     );
     chip.onclick = async () => {
+      // clicar de novo no mesmo tira a escolha; clicar em outro troca na hora
       estado.profissional = sel ? null : p;
       estado.hora = null;
       estado.verTodosHorarios = false;
@@ -525,8 +537,9 @@ function blocoProfissionais() {
     };
     return chip;
   });
-  return el('div', { class: 'card' },
-    el('div', { class: 'card-titulo' }, 'Com quem você quer ser atendido?'),
+  return el('div', { class: 'card', id: 'blocoProfissionais' },
+    el('div', { class: 'card-titulo' }, 'Com quem você quer ser atendido?',
+      estado.profissional ? el('span', { class: 'tag prim' }, estado.profissional.nome) : el('span', { class: 'mini muted' }, 'opcional')),
     el('div', { class: 'pros' }, chips)
   );
 }
