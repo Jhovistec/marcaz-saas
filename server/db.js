@@ -251,8 +251,24 @@ export function traduzir(sql) {
  *   sslmode=no-verify (padrão)-> TLS sem validar a CA — necessário no pooler do Supabase
  * Também aceita MARCAZ_PG_SSL=no-verify|require|disable
  */
+/**
+ * Limpa a DATABASE_URL. Uma cópia do painel do Supabase costuma trazer espaços,
+ * aspas ou quebras de linha — no runtime da Vercel isso vira um hostname que
+ * não existe ("getaddrinfo ENOTFOUND") e o app inteiro cai.
+ */
+export function limpaUrlDoBanco(bruta) {
+  if (!bruta) return null;
+  let s = String(bruta).replace(/[\u00a0\u2028\u2029]/g, ' ').trim();
+  s = s.replace(/^['"]|['"]$/g, '');        // aspas nas pontas
+  s = s.replace(/\s+/g, '');                   // qualquer espaço/quebra dentro da URL
+  s = s.replace(/^(postgres(ql)?:\/\/[^@/?]*):\[(.*)\]@/, '$1:$2@'); // colchetes na senha
+  return s;
+}
+
+export const DATABASE_URL = limpaUrlDoBanco(process.env.DATABASE_URL);
+
 function opcoesSsl() {
-  const url = process.env.DATABASE_URL || '';
+  const url = DATABASE_URL || '';
   const modo = (process.env.MARCAZ_PG_SSL || (/sslmode=disable/.test(url) ? 'disable' : 'no-verify')).toLowerCase();
   if (modo === 'disable') return false;
   if (modo === 'require' || /sslmode=require/.test(url)) return true;
@@ -265,7 +281,7 @@ async function criarPostgres() {
   pg.types.setTypeParser(1700, (v) => parseFloat(v)); // numeric
 
   const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: DATABASE_URL,
     ssl: opcoesSsl(),
     max: Number(process.env.PGPOOL_MAX || 5),
     connectionTimeoutMillis: 15000,
