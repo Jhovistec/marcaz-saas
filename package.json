@@ -1,17 +1,24 @@
 {
-  "name": "marcaz-saas",
+  "name": "marcaz",
   "version": "1.0.0",
-  "description": "Sistema SaaS de Agendamento - Marcaz / Jhovis Tecnologia",
-  "main": "main.js",
+  "private": true,
+  "description": "Marcaz - SaaS de agendamento multi-tenant (Jhovis Tecnologia)",
+  "type": "module",
+  "main": "server/index.js",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
-    "start": "electron .",
-    "build-exe": "electron-builder --win nsis"
+    "start": "node --experimental-sqlite server/index.js",
+    "dev": "node --watch --experimental-sqlite server/index.js",
+    "seed": "node server/seed.js",
+    "db:init": "node --experimental-sqlite -e \"import('./server/db.js').then(async m=>{await m.conectar();console.log('schema criado')})\"",
+    "start:supabase": "node --env-file=config.env server/index.js",
+    "testa:banco": "node --env-file=config.env server/testa-banco.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.4"
-  },
-  "devDependencies": {
-    "electron": "^26.6.10",
-    "electron-builder": "^24.13.3"
+    "chart.js": "^4.6.1",
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
   }
 }

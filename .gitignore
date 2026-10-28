@@ -1,2 +1,11 @@
-dist/ 
-node_modules/ 
+node_modules/
+data/
+.revisao/
+config.env
+.env
+*.log
+
+config.env
+.revisao/conferir.mjs
+.revisao/teste-tradutor.mjs
+.revisao/testa-rls.mjs
