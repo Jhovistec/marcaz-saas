@@ -1,5 +1,6 @@
 // Marcaz — servidor da V1.
 import express from 'express';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db, conectar, MODO } from './db.js';
@@ -12,8 +13,21 @@ import { seed } from './seed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.join(__dirname, '..');
-// Na Vercel o código roda empacotado em /api; as telas ficam em PUBLIC_DIR.
-const PUBLICO = process.env.MARCAZ_PUBLIC_DIR || path.join(RAIZ, 'public');
+// Na Vercel o código roda empacotado; as telas podem cair ao lado do servidor
+// ou na raiz do projeto. Procura nas duas formas.
+function localPublico() {
+  const candidatos = [
+    process.env.MARCAZ_PUBLIC_DIR,
+    path.join(RAIZ, 'public'),
+    path.join(__dirname, '..', '..', 'public'),
+    path.join(process.cwd(), 'public'),
+  ].filter(Boolean);
+  for (const c of candidatos) {
+    if (fs.existsSync(path.join(c, 'shared', 'base.css'))) return c;
+  }
+  return candidatos[0];
+}
+const PUBLICO = localPublico();
 const PORT = process.env.PORT || 3000;
 
 const app = express();
