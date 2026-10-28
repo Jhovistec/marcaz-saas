@@ -39,7 +39,21 @@ app.use('/api/auth', authRoutes);
 app.use('/api/publico', publicoRoutes);
 app.use('/api/gestor', gestorRoutes);
 app.use('/api/control', controlRoutes);
-app.get('/api/health', (_req, res) => res.json({ ok: true, versao: '1.0.0' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, versao: '1.0.0', banco: db.tipo }));
+
+// Diagnóstico de ambiente: mostra quais variáveis chegaram, mascaradas.
+app.get('/__env', (_req, res) => {
+  const masc = (v) => (v ? `${String(v).slice(0, 6)}…(${String(v).length})` : null);
+  res.json({
+    modo: MODO,
+    tem_DATABASE_URL: !!process.env.DATABASE_URL,
+    DATABASE_URL: masc(process.env.DATABASE_URL),
+    MARCAZ_DB: process.env.MARCAZ_DB || null,
+    MARCAZ_PG_SSL: process.env.MARCAZ_PG_SSL || null,
+    tem_MARCAZ_SEGREDO: !!process.env.MARCAZ_SEGREDO,
+    node: process.version,
+  });
+});
 
 // Painel do gestor e Control: páginas fixas (antes do static, senão o
 // redirect automático de /gestor -> /gestor/ atrapalha)

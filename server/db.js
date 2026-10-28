@@ -5,6 +5,7 @@
 // traduz para PostgreSQL quando necessário. Todas as datas são TEXT, para que
 // as telas recebam exatamente o mesmo formato nos dois bancos.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import pgMod from 'pg';
@@ -13,7 +14,19 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-export const MODO = (process.env.MARCAZ_DB || 'sqlite').toLowerCase();
+/**
+ * Modo do banco. Se houver DATABASE_URL configurada, o app assume PostgreSQL
+ * (produção) mesmo que MARCAZ_DB seja esquecido — evita subir com SQLite vazio
+ * num ambiente onde a gravação em disco é bloqueada.
+ */
+function definirModo() {
+  const explicito = (process.env.MARCAZ_DB || '').toLowerCase();
+  if (explicito === 'postgres' || explicito === 'postgresql') return 'postgres';
+  if (explicito === 'sqlite') return 'sqlite';
+  return process.env.DATABASE_URL ? 'postgres' : 'sqlite';
+}
+
+export const MODO = definirModo();
 
 /* ============================ schema ============================ */
 
@@ -172,8 +185,13 @@ function normalizarArgs(args) {
 function criarSqlite() {
   const { DatabaseSync } = require('node:sqlite');
   const DIR = process.env.MARCAZ_DATA_DIR || path.join(__dirname, '..', 'data');
-  fs.mkdirSync(DIR, { recursive: true });
-  const arquivo = process.env.MARCAZ_DB_FILE || path.join(DIR, 'marcaz.db');
+  try {
+    fs.mkdirSync(DIR, { recursive: true });
+  } catch {
+    // Ambiente somente leitura (Vercel/lamba): usa a pasta temporária.
+  }
+  const pastaSegura = fs.existsSync(DIR) ? DIR : os.tmpdir();
+  const arquivo = process.env.MARCAZ_DB_FILE || path.join(pastaSegura, 'marcaz.db');
   const bruto = new DatabaseSync(arquivo);
   bruto.exec('PRAGMA journal_mode = WAL;');
   bruto.exec('PRAGMA foreign_keys = ON;');
