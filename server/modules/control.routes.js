@@ -45,7 +45,7 @@ router.get('/empresas', async (req, res) => {
 });
 
 router.post('/empresas', async (req, res) => {
-  const { nome, razao_social, cnpj, segmento, telefone, endereco, dono_nome, dono_telefone, dono_email, senha, slug, plano } = req.body || {};
+  const { nome, razao_social, cnpj, segmento, telefone, endereco, dono_nome, dono_telefone, dono_email, dono_cpf, senha, slug, plano } = req.body || {};
   if (!nome) return res.status(400).json({ erro: 'Informe o nome do estabelecimento.' });
   if (!dono_nome || !dono_telefone) return res.status(400).json({ erro: 'Informe nome e telefone do proprietário.' });
   if (!senha || String(senha).length < 4) return res.status(400).json({ erro: 'Defina uma senha de acesso com pelo menos 4 caracteres.' });
@@ -61,6 +61,13 @@ router.post('/empresas', async (req, res) => {
   const seg = ['barbearia', 'salao', 'estetica'].includes(segmento) ? segmento : 'barbearia';
   const temas = { barbearia: 'gold', salao: 'rose', estetica: 'emerald' };
   const tel = String(dono_telefone).replace(/\D/g, '');
+  const cnpjSoDigitos = cnpj ? String(cnpj).replace(/\D/g, '') : null;
+  const cpfDono = dono_cpf ? String(dono_cpf).replace(/\D/g, '') : null;
+  if (cnpjSoDigitos && cnpjSoDigitos.length !== 14) return res.status(400).json({ erro: 'CNPJ deve ter 14 dígitos.' });
+  if (cpfDono && cpfDono.length !== 11) return res.status(400).json({ erro: 'CPF do proprietário deve ter 11 dígitos.' });
+  if (cnpjSoDigitos && await db.prepare('SELECT id FROM empresas WHERE cnpj = ?').get(cnpjSoDigitos)) {
+    return res.status(409).json({ erro: 'Já existe uma empresa com este CNPJ.' });
+  }
 
   let empresaId;
   try {
@@ -69,13 +76,13 @@ router.post('/empresas', async (req, res) => {
         `INSERT INTO empresas (slug, nome, razao_social, cnpj, segmento, telefone, endereco, tema, plano, vence_em)
          VALUES (?,?,?,?,?,?,?,?,?, date('now','+30 day'))`
       )
-      .run(s, nome, razao_social || null, cnpj || null, seg, telefone || null, endereco || null,
+      .run(s, nome, razao_social || null, cnpjSoDigitos, seg, telefone || null, endereco || null,
         temas[seg], plano || 'mensal');
     empresaId = info.lastInsertRowid;
     await db.prepare(
-      `INSERT INTO usuarios (empresa_id, nome, telefone, email, senha_hash, papel, cargo)
-       VALUES (?,?,?,?,?, 'dono', 'Proprietário')`
-    ).run(empresaId, dono_nome, tel, dono_email || null, hashSenha(senha));
+      `INSERT INTO usuarios (empresa_id, nome, telefone, email, cpf, senha_hash, papel, cargo)
+       VALUES (?,?,?,?,?,?,'dono','Proprietário')`
+    ).run(empresaId, dono_nome, tel, dono_email || null, cpfDono, hashSenha(senha));
   } catch (e) {
     return res.status(400).json({ erro: 'Não foi possível criar a empresa: ' + e.message });
   }
@@ -87,7 +94,7 @@ router.get('/empresas/:id', async (req, res) => {
   const e = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(req.params.id);
   if (!e) return res.status(404).json({ erro: 'Empresa não encontrada.' });
   const dono = await db
-    .prepare(`SELECT id, nome, telefone, email FROM usuarios WHERE empresa_id = ? AND papel = 'dono'`)
+    .prepare(`SELECT id, nome, telefone, email, cpf FROM usuarios WHERE empresa_id = ? AND papel = 'dono'`)
     .get(e.id);
   res.json({ empresa: e, dono: dono || null });
 });
@@ -97,6 +104,7 @@ router.put('/empresas/:id', exigeIdNumerico, async (req, res) => {
   if (!e) return res.status(404).json({ erro: 'Empresa não encontrada.' });
   const b = req.body || {};
   const texto = (v, atual) => (v !== undefined ? (v === null ? null : String(v).trim() || null) : atual);
+  const doc = (v, atual) => (v !== undefined ? (String(v).replace(/\D/g, '') || null) : atual);
 
   const nome = texto(b.nome, e.nome);
   if (!nome) return res.status(400).json({ erro: 'O nome do estabelecimento não pode ficar vazio.' });
@@ -126,7 +134,7 @@ router.put('/empresas/:id', exigeIdNumerico, async (req, res) => {
        almoco_ativo = ?, notif_gestor = ?
      WHERE id = ?`
   ).run(
-    slug, nome, texto(b.razao_social, e.razao_social), texto(b.cnpj, e.cnpj), seg,
+    slug, nome, texto(b.razao_social, e.razao_social), doc(b.cnpj, e.cnpj), seg,
     texto(b.telefone, e.telefone), texto(b.endereco, e.endereco), texto(b.logo_url, e.logo_url),
     texto(b.instagram, e.instagram), texto(b.whatsapp, e.whatsapp), texto(b.facebook, e.facebook),
     tema, status, texto(b.plano, e.plano) || e.plano, texto(b.vence_em, e.vence_em),
