@@ -3,7 +3,7 @@ import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { db, conectar, MODO } from './db.js';
+import { db, conectar, MODO, urlIncompativelComIPv4 } from './db.js';
 import { sessao, limpaSessoesVencidas } from './auth.js';
 import authRoutes from './modules/auth.routes.js';
 import publicoRoutes from './modules/publico.routes.js';
@@ -42,6 +42,11 @@ app.use('/api/control', controlRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true, versao: '1.0.0', banco: db.tipo }));
 
 // Diagnóstico de ambiente: mostra quais variáveis chegaram, mascaradas.
+app.use('/api', (req, res, next) => {
+  if (erroBanco) return res.status(503).json({ erro: 'Banco indisponível: ' + erroBanco });
+  next();
+});
+
 app.get('/__env', (_req, res) => {
   const masc = (v) => (v ? `${String(v).slice(0, 6)}…(${String(v).length})` : null);
   res.json({
@@ -56,6 +61,8 @@ app.get('/__env', (_req, res) => {
     MARCAZ_PG_SSL: process.env.MARCAZ_PG_SSL || null,
     tem_MARCAZ_SEGREDO: !!process.env.MARCAZ_SEGREDO,
     node: process.version,
+    erro_banco: erroBanco,
+    aviso_ipv4: urlIncompativelComIPv4(process.env.DATABASE_URL),
   });
 });
 
@@ -87,13 +94,21 @@ app.use((err, _req, res, _next) => {
 
 let inicializado = null;
 
+let erroBanco = null;
+
 async function iniciar() {
-  if (!inicializado) {
+  if (inicializado) return inicializado;
+  try {
     await conectar();
     await seed({ silencioso: true });
     await limpaSessoesVencidas();
-    inicializado = app;
+    erroBanco = null;
+  } catch (e) {
+    // O site continua de pé para dar a mensagem certa em vez de um 500 genérico.
+    erroBanco = e.message;
+    console.error('[marcaz] banco indisponível:', e.message);
   }
+  inicializado = app;
   return inicializado;
 }
 
