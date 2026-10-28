@@ -88,8 +88,12 @@ export function leCookie(req, nome) {
 export async function sessao(req, _res, next) {
   try {
     req.usuario = await usuarioDoToken(leCookie(req, 'marcaz_sessao'));
+    // O Control usa cookie próprio: o dono de uma barbearia logado ao lado não
+    // rouba o acesso do operador master na mesma aba.
+    req.master = await usuarioDoToken(leCookie(req, 'marcaz_control'));
   } catch (e) {
     req.usuario = null;
+    req.master = null;
   }
   next();
 }
@@ -107,6 +111,14 @@ export function exigePapel(...papeis) {
     }
     next();
   };
+}
+
+/** Control: usa a sessão da equipe Jhovis (cookie próprio) como usuário da rota. */
+export function exigeMaster(req, res, next) {
+  if (!req.master) return res.status(401).json({ erro: 'Entre no Control para continuar.' });
+  if (req.master.papel !== 'master') return res.status(403).json({ erro: 'Este acesso não é da equipe Jhovis.' });
+  req.usuario = req.master;
+  next();
 }
 
 // Dono tem todas as permissões; funcionário só as liberadas pelo dono.

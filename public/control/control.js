@@ -1,6 +1,6 @@
 import {
   get, post, put, patch, $, el, brl, mascaraTelefone, mascaraCNPJ, aviso, limpaAviso,
-  rodapeJhovis, abrirModal, fecharModal, ligaModalFechamento,
+  rodapeJhovis, abrirModal, fecharModal, ligaModalFechamento, sucesso, janelaModal,
 } from '/shared/app.js';
 
 const app = $('#app');
@@ -10,7 +10,7 @@ const S = { usuario: null, empresas: [], totais: null, equipe: [], aba: 'empresa
 
 async function iniciar() {
   try {
-    const eu = await get('/api/auth/eu');
+    const eu = await get('/api/auth/eu?escopo=control');
     if (eu.usuario.papel !== 'master') throw new Error('sem acesso');
     S.usuario = eu.usuario;
   } catch {
@@ -216,19 +216,21 @@ function modalNovaEmpresa() {
             dono_email: donoEmail.input.value, senha: senha.input.value,
           });
           fecharModal('modalEmpresa');
-          alert(`Empresa criada. Link do cliente: /${r.slug}`);
+          document.getElementById('modalEmpresa')?.remove();
+          sucesso(`Empresa criada. Link do cliente: /${r.slug}`);
           telaPainel();
         } catch (e) {
           aviso(alerta, 'erro', e.message);
           ev.currentTarget.disabled = false;
+          ev.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
       },
     }, 'Criar empresa')
   );
 
-  document.body.append(
-    el('div', { class: 'modal-fundo', id: 'modalEmpresa' }, el('div', { class: 'modal' }, el('h3', {}, 'Nova empresa / licença'), el('p', { class: 'modal-sub' }, 'Cria o estabelecimento, o acesso do proprietário e o link do cliente.'), corpo))
-  );
+  document.getElementById('modalEmpresa')?.remove();
+  document.body.append(janelaModal('modalEmpresa', 'Nova empresa / licença',
+    'Cria o estabelecimento, o acesso do proprietário e o link do cliente.', corpo));
   ligaModalFechamento();
   abrirModal('modalEmpresa');
 }
@@ -344,21 +346,12 @@ async function modalEditarEmpresa(id) {
           }
         },
       }, 'Salvar alterações'),
-      el('button', {
-        class: 'btn btn-fantasma', type: 'button',
-        onclick: () => { fecharModal('modalEmpresaEditar'); document.getElementById('modalEmpresaEditar')?.remove(); },
-      }, 'Cancelar')
     )
   );
 
   document.getElementById('modalEmpresaEditar')?.remove();
-  document.body.append(
-    el('div', { class: 'modal-fundo', id: 'modalEmpresaEditar' },
-      el('div', { class: 'modal', style: 'max-width:560px' },
-        el('h3', {}, `Editar — ${emp.nome}`),
-        el('p', { class: 'modal-sub' }, 'Corrija cadastro, contato, tema, status da assinatura e janela de agendamento.'),
-        corpo))
-  );
+  document.body.append(janelaModal('modalEmpresaEditar', `Editar — ${emp.nome}`,
+    'Corrija cadastro, contato, tema, status da assinatura e janela de agendamento.', corpo));
   ligaModalFechamento();
   abrirModal('modalEmpresaEditar');
 }
