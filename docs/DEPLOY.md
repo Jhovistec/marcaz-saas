@@ -29,11 +29,19 @@ RLS ativado, 3 empresas de demonstração.
 | Nome | Valor |
 |---|---|
 | `MARCAZ_DB` | `postgres` |
-| `DATABASE_URL` | `postgresql://postgres:6NFJZ1baAi29PziA@db.eppvckcfdubytvoscjfs.supabase.co:5432/postgres` |
+| `DATABASE_URL` | string do **Connection pooling** (host `aws-0-<regiao>.pooler.supabase.com`) |
 | `MARCAZ_PG_SSL` | `no-verify` |
 | `MARCAZ_SEGREDO` | `4cb19759590c8f9bb9db4592bb4e10c7c7864608ed115f1d9a7cbd8ac3f65781` |
 
-5. **Deploy**. Em ~1 minuto aparece o domínio de produção.
+⚠️ **Não use a *Direct connection* (`db.<projeto>.supabase.co`).** Ela só existe em
+**IPv6**, e a Vercel fala apenas **IPv4** — o app sobe e dá erro interno em tudo.
+No Supabase: **Project Settings → Database → Connection pooling → Enable**, e copie a
+string que aparece ali (usuario `postgres.<ref>`, porta 6543 ou 5432).
+
+Para conferir o que a Vercel está usando, abra `https://SEU-DOMINIO/__env`:
+mostra `host_do_banco`, o modo e o aviso de IPv4 quando a string está errada.
+
+5. **Deploy** (variável nova só vale num deploy novo: *Deployments → ⋯ → Redeploy*).
 6. Se o projeto antigo `marcaz-saas` (o protótipo da Gemini) incomodar, pode
    deletá-lo depois de conferir que o novo está no ar: *Settings → General → Delete*.
 
