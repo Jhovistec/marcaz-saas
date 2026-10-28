@@ -55,7 +55,7 @@ a:hover { text-decoration: underline; }
 ::-webkit-scrollbar-thumb:hover { background: var(--txt-3); }
 ::-webkit-scrollbar-track { background: transparent; }
 
-.wrap { width: 100%; max-width: 480px; margin: 0 auto; padding: 18px 16px 110px; }
+.wrap { width: 100%; max-width: 480px; margin: 0 auto; padding: 18px 16px 132px; }
 .wrap-largo { width: 100%; max-width: 1240px; margin: 0 auto; padding: 18px 16px; }
 
 /* --- cartões --- */
