@@ -4,3 +4,8 @@ data/
 config.env
 .env
 *.log
+
+config.env
+.revisao/conferir.mjs
+.revisao/teste-tradutor.mjs
+.revisao/testa-rls.mjs

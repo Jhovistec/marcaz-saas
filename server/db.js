@@ -253,24 +253,9 @@ async function criarPostgres() {
     idleTimeoutMillis: 30000,
   });
 
-  // Em pooler de transação (Supabase porta 6543) o nome do prepared statement
-  // precisa ser único por consulta — sem isso ele reclama de "already exists".
-  let seq = 0;
-  const rodar = async (sqlFinal, args) => {
-    const cliente = await pool.connect();
-    try {
-      const nome = `marcaz_${++seq}`;
-      if (/;/.test(sqlFinal) === false && args.length) {
-        await cliente.query(`PREPARE ${nome} AS ${sqlFinal}`);
-        const r = await cliente.query(`EXECUTE ${nome}(${args.map((_a, i) => `$${i + 1}`).join(',')})`, args);
-        await cliente.query(`DEALLOCATE ${nome}`).catch(() => {});
-        return r;
-      }
-      return await cliente.query(sqlFinal, args);
-    } finally {
-      cliente.release();
-    }
-  };
+  // Uma consulta por vez: o pg já usa o protocolo estendido, que funciona tanto
+  // na conexão direta (5432) quanto no pooler de transação (6543) do Supabase.
+  const rodar = (sqlFinal, args) => pool.query(sqlFinal, args);
 
   const mapear = (r) => {
     const nomes = r.fields ? r.fields.map((f) => f.name) : [];

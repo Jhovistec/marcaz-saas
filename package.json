@@ -12,7 +12,9 @@
     "start": "node --experimental-sqlite server/index.js",
     "dev": "node --watch --experimental-sqlite server/index.js",
     "seed": "node server/seed.js",
-    "db:init": "node --experimental-sqlite -e \"import('./server/db.js').then(async m=>{await m.conectar();console.log('schema criado')})\""
+    "db:init": "node --experimental-sqlite -e \"import('./server/db.js').then(async m=>{await m.conectar();console.log('schema criado')})\"",
+    "start:supabase": "node --env-file=config.env server/index.js",
+    "testa:banco": "node --env-file=config.env server/testa-banco.js"
   },
   "dependencies": {
     "chart.js": "^4.6.1",
