@@ -1,21 +1,57 @@
 /* Marcaz — ajustes finos compartilhados */
 
-/* Ícone do calendário/relógio nativo dos inputs de data e hora: sempre claro,
-   independente do tema da empresa (antes sumia no fundo escuro). */
+/* ---------------------------------------------------------------------------
+   Ícones dos campos de data/hora
+   O ícone nativo do Chrome herda a cor do sistema e, sobre fundo escuro, fica
+   preto e invisível. A cor do ícone é controlada por --icone-campo:
+   tema escuro → claro; se um dia houver tema claro, o valor inverte.
+--------------------------------------------------------------------------- */
+:root { --icone-campo: #ffffff; }
+
 input[type='date']::-webkit-calendar-picker-indicator,
 input[type='time']::-webkit-calendar-picker-indicator,
 input[type='datetime-local']::-webkit-calendar-picker-indicator,
 input[type='month']::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(2.2);
-  opacity: 0.95;
+  /* brightness(0) joga o ícone para preto puro e invert(1) o pinta de branco;
+     depois tintamos com a cor do tema. */
+  filter: brightness(0) invert(1);
+  opacity: 1;
   cursor: pointer;
-  padding: 2px;
+  padding: 3px;
   border-radius: 6px;
 }
-input[type='date']::-webkit-calendar-picker-indicator:hover,
-input[type='time']::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-  background: color-mix(in srgb, var(--prim) 25%, transparent);
+input[type='date']:hover::-webkit-calendar-picker-indicator,
+input[type='time']:hover::-webkit-calendar-picker-indicator,
+input[type='date']:focus::-webkit-calendar-picker-indicator,
+input[type='time']:focus::-webkit-calendar-picker-indicator {
+  background: color-mix(in srgb, var(--prim) 28%, transparent);
 }
-/* Firefox / navegadores sem o pseudo-elemento: deixa o campo clicável e legível */
-input[type='date'], input[type='time'] { color-scheme: dark; }
+
+/* Firefox e navegadores sem o pseudo-elemento: campo legível em fundo escuro */
+input[type='date'], input[type='time'], input[type='datetime-local'] { color-scheme: dark; }
+
+/* A setinha dos <select> também segue o tema (desenhada em CSS, não é ícone do SO) */
+select {
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--icone-campo) 50%),
+    linear-gradient(135deg, var(--icone-campo) 50%, transparent 50%);
+  background-position: calc(100% - 19px) 55%, calc(100% - 14px) 55%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* Caixas de seleção com a cor do tema, visíveis em fundo escuro */
+input[type='checkbox'], input[type='radio'] {
+  accent-color: var(--prim);
+}
+
+/* Se um dia existir tema claro, estes dois blocos invertem tudo de uma vez */
+html[data-posso="claro"] { --icone-campo: #14161f; }
+html[data-posso="claro"] input[type='date']::-webkit-calendar-picker-indicator,
+html[data-posso="claro"] input[type='time']::-webkit-calendar-picker-indicator,
+html[data-posso="claro"] input[type='datetime-local']::-webkit-calendar-picker-indicator,
+html[data-posso="claro"] input[type='month']::-webkit-calendar-picker-indicator {
+  filter: brightness(0);
+}
+html[data-posso="claro"] input[type='date'],
+html[data-posso="claro"] input[type='time'] { color-scheme: light; }

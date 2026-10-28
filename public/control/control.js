@@ -1,5 +1,5 @@
 import {
-  get, post, put, patch, $, el, brl, mascaraTelefone, mascaraCNPJ, aviso, limpaAviso,
+  get, post, put, patch, $, el, brl, mascaraTelefone, mascaraCNPJ, mascaraCPF, aviso, limpaAviso,
   rodapeJhovis, abrirModal, fecharModal, ligaModalFechamento, sucesso, janelaModal,
 } from '/shared/app.js';
 
@@ -187,6 +187,8 @@ function modalNovaEmpresa() {
   const endereco = campo('Endereço', 'Rua, número — cidade');
   const slug = campo('Link (slug)', 'barbearia-noel');
   const donoNome = campo('Nome do proprietário', 'Nome completo');
+  const donoCpf = campo('CPF do proprietário (login)', '123.456.789-00', { inputmode: 'numeric' });
+  donoCpf.input.addEventListener('input', () => { donoCpf.input.value = mascaraCPF(donoCpf.input.value); });
   const donoTel = campo('Telefone do proprietário (login)', '(99) 99999-9999', { inputmode: 'numeric' });
   donoTel.input.addEventListener('input', () => { donoTel.input.value = mascaraTelefone(donoTel.input.value); });
   const donoEmail = campo('E-mail do proprietário', 'email@empresa.com', { type: 'email' });
@@ -200,7 +202,7 @@ function modalNovaEmpresa() {
       tel.bloco
     ),
     endereco.bloco, slug.bloco,
-    el('div', { class: 'titulo-secao' }, 'Proprietário'),
+    el('div', { class: 'titulo-secao' }, 'Acesso do proprietário'),
     donoNome.bloco, el('div', { class: 'linha-campos' }, donoTel.bloco, donoEmail.bloco),
     senha.bloco, alerta,
     el('button', {
@@ -213,7 +215,7 @@ function modalNovaEmpresa() {
             nome: nome.input.value, razao_social: razao.input.value, cnpj: cnpj.input.value,
             segmento: segmento.value, telefone: tel.input.value, endereco: endereco.input.value,
             slug: slug.input.value, dono_nome: donoNome.input.value, dono_telefone: donoTel.input.value,
-            dono_email: donoEmail.input.value, senha: senha.input.value,
+            dono_cpf: donoCpf.input.value, dono_email: donoEmail.input.value, senha: senha.input.value,
           });
           fecharModal('modalEmpresa');
           document.getElementById('modalEmpresa')?.remove();
@@ -283,6 +285,8 @@ async function modalEditarEmpresa(id) {
   const diasAgenda = campo('Dias de agendamento', String(emp.dias_agenda), { type: 'number', min: '3', max: '15', step: '1' });
 
   const donoNome = campo('Nome do proprietário', dono.nome);
+  const donoCpf = campo('CPF do proprietário (login)', dono.cpf, { inputmode: 'numeric' });
+  donoCpf.input.addEventListener('input', () => { donoCpf.input.value = mascaraCPF(donoCpf.input.value); });
   const donoTel = campo('Telefone do proprietário', dono.telefone, { inputmode: 'numeric' });
   donoTel.input.addEventListener('input', () => { donoTel.input.value = mascaraTelefone(donoTel.input.value); });
   const donoEmail = campo('E-mail do proprietário', dono.email, { type: 'email' });
@@ -315,9 +319,10 @@ async function modalEditarEmpresa(id) {
     el('div', { class: 'ajuda', style: 'margin:-6px 0 16px' },
       'Quantos dias à frente o cliente pode agendar — de 3 a 15 (máximo do sistema).'),
 
-    el('div', { class: 'titulo-secao' }, 'Proprietário'),
+    el('div', { class: 'titulo-secao' }, 'Acesso do proprietário'),
     donoNome.bloco,
-    el('div', { class: 'linha-campos' }, donoTel.bloco, donoEmail.bloco),
+    el('div', { class: 'linha-campos' }, donoCpf.bloco, donoTel.bloco),
+    donoEmail.bloco,
 
     alerta,
     el('div', { class: 'btn-linha', style: 'margin-top:4px' },
@@ -335,7 +340,8 @@ async function modalEditarEmpresa(id) {
               tema: tema.value, status: status.value, plano: plano.input.value, vence_em: vence.input.value,
               aberto_hora: abertura.input.value, fecha_hora: fechamento.input.value,
               dias_agenda: Number(diasAgenda.input.value),
-              dono_nome: donoNome.input.value, dono_telefone: donoTel.input.value, dono_email: donoEmail.input.value,
+              dono_nome: donoNome.input.value, dono_telefone: donoTel.input.value,
+              dono_cpf: donoCpf.input.value, dono_email: donoEmail.input.value,
             });
             fecharModal('modalEmpresaEditar');
             document.getElementById('modalEmpresaEditar')?.remove();

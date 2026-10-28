@@ -1,7 +1,7 @@
 import {
-  get, post, put, patch, del, $, el, brl, brlParaCentavos, mascaraTelefone, mascaraMoeda,
+  get, post, put, patch, del, $, el, brl, brlParaCentavos, mascaraTelefone, mascaraCPF, mascaraCNPJ, mascaraMoeda,
   aviso, limpaAviso, hojeISO, dataLonga, proximosDias, rodapeJhovis,
-  abrirModal, fecharModal, ligaModalFechamento, isoParaData, diaCurto,
+  abrirModal, fecharModal, ligaModalFechamento, isoParaData, diaCurto, sucesso,
 } from '/shared/app.js';
 
 const app = $('#app');
@@ -31,7 +31,6 @@ const TEMAS = [
   ['purple', 'Violeta'],
 ];
 
-const NOMES_EMPRESA = { 'barbearia-noel': 'Barbearia Noel', 'salao-divas': 'Salão Divas', 'studio-plena': 'Studio Plena' };
 const PERMS = [
   ['agenda', 'Agenda'],
   ['servicos', 'Serviços e promoções'],
@@ -270,28 +269,26 @@ async function iniciar() {
   }, 25000);
 }
 
-async function listaEmpresasLogin() {
-  try {
-    const r = await get('/api/auth/empresas');
-    if (Array.isArray(r.empresas) && r.empresas.length) return r.empresas.map((e) => [e.slug, e.nome]);
-  } catch { /* sem conexão: usa as de demonstração */ }
-  return Object.entries(NOMES_EMPRESA);
-}
-
 function telaLogin() {
+  // Sem seletor de empresa: quem digita o documento já é dono de uma unidade só.
+  // Assim um empresário nunca vê a lista dos seus concorrentes.
   const alerta = el('div', { class: 'alerta' });
-  const slug = el('select', {}, el('option', { value: '' }, 'Carregando…'));
-  const login = el('input', { placeholder: 'Telefone ou e-mail', autocomplete: 'username' });
+  const login = el('input', {
+    placeholder: 'CPF, CNPJ, telefone ou e-mail',
+    autocomplete: 'username', inputmode: 'text', spellcheck: 'false',
+  });
   const senha = el('input', { type: 'password', placeholder: 'Sua senha', autocomplete: 'current-password' });
+
   login.addEventListener('input', () => {
-    if (/[a-zA-Z@]/.test(login.value)) return;
-    login.value = mascaraTelefone(login.value);
+    if (login.value.includes('@')) return;                 // e-mail: deixa como está
+    const d = login.value.replace(/\D/g, '');
+    login.value = d.length <= 11 ? mascaraCPF(d) : mascaraCNPJ(d);
   });
+
+  const dica = el('div', { class: 'ajuda' },
+    'Proprietário: CPF dele ou o CNPJ da empresa. Funcionário: telefone ou e-mail.');
   const botao = el('button', { class: 'btn btn-bloco', type: 'submit' }, 'Entrar no painel');
-  listaEmpresasLogin().then((opcoes) => {
-    slug.replaceChildren(el('option', { value: '' }, 'Detectar pelo meu login'),
-      ...opcoes.map(([v, r]) => el('option', { value: v }, r)));
-  });
+
   if (avisoSessao) {
     aviso(alerta, 'info', 'Sua sessão expirou. Entre de novo para continuar — nada foi perdido.');
     avisoSessao = false;
@@ -304,26 +301,17 @@ function telaLogin() {
       botao.disabled = true;
       botao.textContent = 'Entrando…';
       try {
-        await post('/api/auth/painel/login', { empresa: slug.value || undefined, login: login.value, senha: senha.value });
+        await post('/api/auth/painel/login', { login: login.value, senha: senha.value });
         await iniciar();
       } catch (e) {
-          if (trataSessao(e)) return;
-          // o mesmo telefone pode pertencer a mais de um estabelecimento (redes/filiais):
-          // a resposta traz a lista e oferecemos a escolha na hora
-          if (e.dados && Array.isArray(e.dados.empresas)) {
-            slug.replaceChildren(
-              el('option', { value: '' }, 'Escolha o estabelecimento'),
-              ...e.dados.empresas.map((x) => el('option', { value: x.slug }, x.nome))
-            );
-          }
-          aviso(alerta, 'erro', e.message);
+        if (trataSessao(e)) return;
+        aviso(alerta, 'erro', e.message);
         botao.disabled = false;
         botao.textContent = 'Entrar no painel';
       }
     },
   },
-    el('div', { class: 'campo' }, el('label', {}, 'Estabelecimento'), slug),
-    el('div', { class: 'campo' }, el('label', {}, 'Telefone ou e-mail'), login),
+    el('div', { class: 'campo' }, el('label', {}, 'Acesso do estabelecimento'), login, dica),
     el('div', { class: 'campo' }, el('label', {}, 'Senha'), senha),
     alerta,
     botao
@@ -1005,7 +993,69 @@ async function abaHorarios(alvo) {
     }, 'Salvar configurações')
   );
 
-  alvo.append(form);
+  alvo.append(cartaoLinkCliente(), form);
+}
+
+/** Mostra o link que o cliente usa para agendar, com botão de copiar. */
+function cartaoLinkCliente() {
+  const e = S.contexto.empresa;
+  const urlCompleta = `${location.origin}/${e.slug}`;
+
+  const campoUrl = el('input', {
+    readonly: '', value: urlCompleta, 'aria-label': 'Link da página de agendamento',
+    onfocus: (ev) => ev.currentTarget.select(),
+  });
+  const alertaLink = el('div', { class: 'alerta' });
+
+  const copiar = async (texto, botao) => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(texto);
+      ok = true;
+    } catch {
+      // navegador sem acesso à área de transferência: copia pelo caminho antigo
+      try {
+        const t = el('textarea', { style: 'position:fixed;opacity:0' });
+        t.value = texto;
+        document.body.append(t);
+        t.select();
+        ok = document.execCommand('copy');
+        t.remove();
+      } catch { ok = false; }
+    }
+    if (ok) {
+      botao.textContent = 'Copiado ✓';
+      botao.classList.add('copiado');
+      sucesso('Link copiado. É só colar no WhatsApp do cliente.');
+      setTimeout(() => { botao.textContent = 'Copiar link'; botao.classList.remove('copiado'); }, 2500);
+    } else {
+      campoUrl.select();
+      aviso(alertaLink, 'info', 'Copie manualmente: o link já está selecionado.');
+    }
+  };
+
+  const btnCopiar = el('button', {
+    class: 'btn btn-mini', type: 'button',
+    onclick: (ev) => copiar(urlCompleta, ev.currentTarget),
+  }, 'Copiar link');
+
+  const btnWhats = el('a', {
+    class: 'btn-whats',
+    href: `https://api.whatsapp.com/send/?text=${encodeURIComponent(`Olá! Aqui está o link para agendar seu horário na ${e.nome}: ${urlCompleta}`)}&app_absent=0`,
+    target: '_blank', rel: 'noopener',
+  }, 'Enviar no WhatsApp');
+
+  return el('div', { class: 'card card-link' },
+    el('div', { class: 'card-titulo' }, 'Seu link de agendamento',
+      el('span', { class: 'mini muted' }, 'é por aqui que o cliente marca horário')),
+    el('div', { class: 'link-linha' }, campoUrl, btnCopiar),
+    alertaLink,
+    el('div', { class: 'btn-linha', style: 'margin-top:12px' },
+      btnWhats,
+      el('a', { class: 'btn btn-fantasma btn-mini', href: `/${e.slug}`, target: '_blank', rel: 'noopener' }, 'Abrir página')),
+    el('div', { class: 'ajuda', style: 'margin-top:12px' },
+      'Cole na bio do Instagram, no status do WhatsApp ou no Google. Novos serviços entram nesse link sozinhos.')
+  );
 }
 
 /* ============================ avisos ============================ */

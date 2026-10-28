@@ -77,62 +77,59 @@ router.post('/cliente/cadastro', async (req, res) => {
   res.status(201).json({ usuario: publico(u) });
 });
 
-// Empresas ativas (só nome e link) — o painel usa para montar o seletor.
-router.get('/empresas', async (_req, res) => {
-  const lista = await db
-    .prepare(`SELECT slug, nome, segmento FROM empresas WHERE status = 'ativa' ORDER BY nome`)
-    .all();
-  res.json({ empresas: lista });
-});
-
 // Login do painel (gestor) — telefone ou e-mail + senha, preso à empresa do link
 router.post('/painel/login', async (req, res) => {
-  const { empresa, login, senha } = req.body || {};
+  // O acesso do painel entra com CPF do responsável, CNPJ do estabelecimento,
+  // telefone ou e-mail. Nada de listar empresas: a identidade de quem digita
+  // já define o estabelecimento — nenhum empresário vê a carteira da Jhovis.
+  const { login, senha } = req.body || {};
   const ident = String(login || '').trim();
-  const tel = normTel(ident);
+  const doc = ident.replace(/\D/g, '');
+  const temArroba = ident.includes('@');
 
-  let emp = null;
-  let u = null;
+  if (!doc && !temArroba) return res.status(400).json({ erro: 'Informe seu CPF, CNPJ, telefone ou e-mail.' });
+  if (!senha) return res.status(400).json({ erro: 'Informe sua senha.' });
 
-  if (empresa) {
-    emp = await db.prepare('SELECT * FROM empresas WHERE slug = ?').get(empresa);
-    if (!emp) return res.status(404).json({ erro: 'Estabelecimento não encontrado.' });
-    u = await db
-      .prepare(
-        `SELECT * FROM usuarios WHERE empresa_id = ? AND papel IN ('dono','funcionario')
-         AND (telefone = ? OR lower(email) = lower(?)) LIMIT 1`
-      )
-      .get(emp.id, tel, ident);
+  // 11 dígitos são ambíguos: pode ser CPF do dono ou celular com DDD. Procuramos
+  // os dois; se bater em mais de um acesso, pedimos o CNPJ da unidade.
+  let sql = `SELECT us.*, e.slug, e.nome AS empresa_nome, e.status AS empresa_status
+             FROM usuarios us JOIN empresas e ON e.id = us.empresa_id
+             WHERE us.papel IN ('dono','funcionario') AND (`;
+  const args = [];
+  if (temArroba) {
+    sql += `lower(us.email) = lower(?))`;
+    args.push(ident);
+  } else if (doc.length === 14) {
+    // CNPJ identifica a empresa: entra o proprietário dela
+    sql += `e.cnpj = ? AND us.papel = 'dono')`;
+    args.push(doc);
+  } else if (doc.length === 11) {
+    sql += `us.cpf = ? OR us.telefone = ?)`;
+    args.push(doc, doc);
   } else {
-    // sem escolher a empresa: o telefone/e-mail de acesso define a empresa
-    const candidatos = await db
-      .prepare(
-        `SELECT us.*, e.slug, e.nome AS empresa_nome, e.status AS empresa_status
-         FROM usuarios us JOIN empresas e ON e.id = us.empresa_id
-         WHERE us.papel IN ('dono','funcionario') AND (us.telefone = ? OR lower(us.email) = lower(?))`
-      )
-      .all(tel, ident);
-    if (!candidatos.length) return res.status(401).json({ erro: 'Usuário ou senha incorretos.' });
-    if (candidatos.length > 1) {
-      return res.status(409).json({
-        erro: 'Este acesso pertence a mais de um estabelecimento. Escolha qual abaixo.',
-        empresas: candidatos.map((c) => ({ slug: c.slug, nome: c.empresa_nome })),
-      });
-    }
-    const c = candidatos[0];
-    emp = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(c.empresa_id);
-    u = c;
+    sql += `us.telefone = ? OR lower(us.email) = lower(?))`;
+    args.push(doc, ident);
+  }
+  sql += " ORDER BY CASE WHEN us.papel = 'dono' THEN 0 ELSE 1 END LIMIT 2";
+
+  const candidatos = await db.prepare(sql).all(...args);
+  if (!candidatos.length) return res.status(401).json({ erro: 'Cadastro não encontrado. Confira o número digitado.' });
+  if (candidatos.length > 1) {
+    return res.status(409).json({ erro: 'Esse número aparece em mais de um acesso. Entre com o CNPJ da empresa.' });
   }
 
-  if (!u || !verificaSenha(senha, u.senha_hash)) {
-    return res.status(401).json({ erro: 'Usuário ou senha incorretos.' });
-  }
-  if (!u.ativo) return res.status(403).json({ erro: 'Usuário desativado pelo gestor.' });
+  const u = candidatos[0];
+  const emp = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(u.empresa_id);
+  if (!verificaSenha(senha, u.senha_hash)) return res.status(401).json({ erro: 'Senha incorreta.' });
+  if (!u.ativo) return res.status(403).json({ erro: 'Usuário desativado pelo proprietário.' });
   if (emp.status !== 'ativa' && u.papel !== 'dono') {
-    return res.status(403).json({ erro: 'Assinatura do estabelecimento bloqueada.' });
+    return res.status(403).json({ erro: 'Assinatura bloqueada. Fale com a Jhovis Tecnologia.' });
   }
   setCookie(res, await criaToken(u.id));
-  res.json({ usuario: publico(u), empresa: { slug: emp.slug, nome: emp.nome, status: emp.status } });
+  res.json({
+    usuario: publico(u),
+    empresa: { slug: emp.slug, nome: emp.nome, status: emp.status },
+  });
 });
 
 // Login do Marcaz Control (equipe Jhovis)
