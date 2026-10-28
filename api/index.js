@@ -40,6 +40,17 @@ export default async function handler(req, res) {
   } catch (e) {
     res.statusCode = 500;
     res.setHeader('Content-Type', 'text/plain');
-    return res.end('Falha ao iniciar o Marcaz: ' + e.message + '\n' + JSON.stringify(inventario()));
+    const msg = e.message || '';
+    if (/ENOTFOUND|EAI_AGAIN/.test(msg)) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.end(
+        'O banco informado não é alcançável daqui.\n\n' +
+        'Motivo provável: a DATABASE_URL usa o endereço "db.<projeto>.supabase.co", que só ' +
+        'existe em IPv6 — e a Vercel fala apenas IPv4.\n' +
+        'Correção: use a string do Connection pooling (host aws-0-<região>.pooler.supabase.com).\n\n' +
+        'Host recebido: ' + String(process.env.DATABASE_URL || '').replace(/^[^@]*@/, '').slice(0, 80)
+      );
+    }
+    return res.end('Falha ao iniciar o Marcaz: ' + msg);
   }
 }

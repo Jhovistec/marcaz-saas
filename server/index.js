@@ -47,6 +47,10 @@ app.get('/__env', (_req, res) => {
   res.json({
     modo: MODO,
     tem_DATABASE_URL: !!process.env.DATABASE_URL,
+    host_do_banco: (() => {
+      try { return new URL((process.env.DATABASE_URL || '').replace(/\s+/g, '')).hostname; }
+      catch { return null; }
+    })(),
     DATABASE_URL: masc(process.env.DATABASE_URL),
     MARCAZ_DB: process.env.MARCAZ_DB || null,
     MARCAZ_PG_SSL: process.env.MARCAZ_PG_SSL || null,
