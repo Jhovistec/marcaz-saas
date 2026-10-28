@@ -189,7 +189,7 @@ function blocoFila() {
         el('div', {},
           el('div', { class: 'fila-titulo' }, 'Cliente finalizado?'),
           el('div', { class: 'mini muted', style: 'margin-top:3px' },
-            `${atual.servico} · ${atual.avulso ? atual.avulso_nome : atual.cliente || 'Cliente'} · ${atual.hora} com ${atual.profissional}`)
+            `${nomeServicos} · ${atual.avulso ? atual.avulso_nome : atual.cliente || 'Cliente'} · ${atual.hora} com ${atual.profissional}`)
         ),
         el('div', { class: 'btn-linha' }, botaoSim, botaoNao)
       ),
@@ -395,27 +395,49 @@ function blocoKpis() {
   );
 }
 
+/** Serviços marcados na mesma visita viram um cartão só. */
+function agruparAgenda(lista) {
+  const saida = [];
+  for (const a of lista) {
+    const anterior = saida[saida.length - 1];
+    if (a.grupo && anterior && anterior.grupo === a.grupo && a.profissional_id === anterior.profissional_id) {
+      anterior.servicos.push(a.servico);
+      anterior.itens.push(a);
+      const [hh, mm] = a.hora.split(':').map(Number);
+      const termino = hh * 60 + mm + a.duracao_min;
+      anterior.fim = `${String(Math.floor(termino / 60)).padStart(2, '0')}:${String(termino % 60).padStart(2, '0')}`;
+      anterior.preco += a.preco_cent;
+      anterior.duracao += a.duracao_min;
+    } else {
+      saida.push({ ...a, servicos: [a.servico], itens: [a], fim: a.hora,
+        preco: a.preco_cent, duracao: a.duracao_min });
+    }
+  }
+  return saida;
+}
+
 function blocoListaAgenda() {
   const lista = el('div', { class: 'grid-agenda', id: 'listaAgenda' });
   if (!S.agenda.length) {
     lista.append(el('div', { class: 'ag-vazio' }, el('span', { class: 'vazio-icone' }, '📅'), 'Nenhum agendamento para este dia.'));
     return lista;
   }
-  for (const a of S.agenda) {
+  for (const a of agruparAgenda(S.agenda)) {
     const cliente = a.avulso ? a.avulso_nome : a.cliente || 'Cliente';
+    const varios = a.itens.length > 1;
     const meta = el('div', { class: 'ag-meta' },
       el('span', {}, '👤 ' + a.profissional),
-      el('span', {}, '· ' + brl(a.preco_cent)),
+      el('span', {}, '· ' + brl(a.preco)),
       a.avulso ? el('span', { class: 'tag prim', style: 'padding:1px 7px' }, 'avulso') : null
     );
     lista.append(
       el('div', { class: `ag${a.profissional_id === S.contexto.usuario.id ? ' meu' : ''}` },
         el('div', {},
-          el('div', { class: 'ag-hora' }, a.hora),
-          el('div', { class: 'ag-duracao' }, `${a.duracao_min} min`)
+          el('div', { class: 'ag-hora' }, varios ? `${a.hora}` : a.hora),
+          el('div', { class: 'ag-duracao' }, varios ? `até ${a.fim}` : `${a.duracao_min} min`)
         ),
         el('div', {},
-          el('div', { class: 'ag-servico' }, a.servico),
+          el('div', { class: 'ag-servico' }, a.servicos.join(' + ')),
           el('div', { class: 'ag-cliente' }, cliente),
           meta
         ),

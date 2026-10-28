@@ -161,14 +161,26 @@ router.get('/fila', exigePermissao('agenda'), async (req, res) => {
   const agora = new Date();
   const agoraMin = agora.getHours() * 60 + agora.getMinutes();
   const ehHoje = data === hojeISO();
-  const comMin = lista.map((a) => ({ ...a, inicioMin: minutos(a.hora) }));
 
-  const proximo = ehHoje
-    ? comMin.find((a) => a.inicioMin >= agoraMin) || comMin[0] || null
-    : comMin[0] || null;
+  // Junta na fila os serviços marcados na mesma visita (grupo)
+  const visitas = [];
+  for (const a of lista) {
+    const anterior = visitas[visitas.length - 1];
+    if (a.grupo && anterior && anterior.grupo === a.grupo && a.profissional_id === anterior.profissional_id) {
+      anterior.servicos.push(a.servico);
+      anterior.itens.push(a);
+      anterior.fimMin = minutos(a.hora) + a.duracao_min;
+    } else {
+      visitas.push({ ...a, inicioMin: minutos(a.hora), fimMin: minutos(a.hora) + a.duracao_min,
+        servicos: [a.servico], itens: [a] });
+    }
+  }
+
   const atual = ehHoje
-    ? [...comMin].reverse().find((a) => a.inicioMin <= agoraMin) || null
+    ? visitas.find((v) => v.inicioMin <= agoraMin && agoraMin < v.fimMin)
+      || [...visitas].reverse().find((v) => v.inicioMin <= agoraMin) || null
     : null;
+  const proximo = visitas.find((v) => (!atual || v !== atual) && v.inicioMin >= (atual ? atual.fimMin : agoraMin)) || null;
 
   res.json({
     data,
@@ -185,6 +197,13 @@ router.post('/agenda/:id/finalizar', exigePermissao('agenda'), exigeIdNumerico, 
   if (!e) return;
   const ag = await db.prepare('SELECT * FROM agendamentos WHERE id = ? AND empresa_id = ?').get(req.params.id, e.id);
   if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado.' });
+  if (ag.grupo) {
+    await db.prepare(
+      `UPDATE agendamentos SET status = 'concluido', concluido_em = datetime('now')
+       WHERE grupo = ? AND data = ? AND profissional_id = ? AND status = 'agendado'`
+    ).run(ag.grupo, ag.data, ag.profissional_id);
+    return res.json({ ok: true, visita: true });
+  }
   await db.prepare("UPDATE agendamentos SET status = 'concluido', concluido_em = datetime('now') WHERE id = ?").run(ag.id);
   res.json({ ok: true });
 });
@@ -197,16 +216,26 @@ router.post('/agenda/:id/atrasar', exigePermissao('agenda'), exigeIdNumerico, as
   const ag = await db.prepare('SELECT * FROM agendamentos WHERE id = ? AND empresa_id = ?').get(req.params.id, e.id);
   if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado.' });
 
-  await db.prepare('UPDATE agendamentos SET atraso_min = atraso_min + ? WHERE id = ?').run(minutosAtraso, ag.id);
+  // a visita inteira atrasa (todos os serviços marcados juntos)
+  if (ag.grupo) {
+    await db.prepare(`UPDATE agendamentos SET atraso_min = atraso_min + ? WHERE grupo = ? AND data = ? AND status = 'agendado'`)
+      .run(minutosAtraso, ag.grupo, ag.data);
+  } else {
+    await db.prepare('UPDATE agendamentos SET atraso_min = atraso_min + ? WHERE id = ?').run(minutosAtraso, ag.id);
+  }
 
-  // Avisa o próximo da fila do mesmo profissional (ou o próximo do dia)
+  // o próximo depois desta visita é quem recebe o aviso
+  const termino = minutos(ag.hora) + ag.duracao_min + minutosAtraso;
+  const horaTermino = `${String(Math.floor(termino / 60)).padStart(2, '0')}:${String(termino % 60).padStart(2, '0')}`;
   const proximo = await db
     .prepare(
       `SELECT * FROM agendamentos
-       WHERE empresa_id = ? AND data = ? AND status = 'agendado' AND id <> ? AND hora >= ?
+       WHERE empresa_id = ? AND data = ? AND status = 'agendado'
+         AND (${ag.grupo ? 'grupo IS NULL OR grupo <> ?' : 'id <> ?'} )
+         AND hora >= ?
        ORDER BY hora LIMIT 1`
     )
-    .get(e.id, ag.data, ag.id, ag.hora);
+    .get(e.id, ag.data, ag.grupo || ag.id, horaTermino);
 
   if (proximo) {
     await db.prepare('UPDATE agendamentos SET atraso_min = atraso_min + ? WHERE id = ?').run(minutosAtraso, proximo.id);

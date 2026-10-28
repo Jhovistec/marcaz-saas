@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS agendamentos (
   avulso_nome     TEXT,
   criado_por      INTEGER,
   atraso_min      INTEGER NOT NULL DEFAULT 0,
+  grupo           TEXT,          -- mesmo valor = serviços da mesma visita
   concluido_em    TEXT,
   criado_em       TEXT NOT NULL DEFAULT {NOW}
 );
@@ -171,6 +172,7 @@ const MIGRACOES = [
   ['empresas', 'notif_gestor', 'INTEGER NOT NULL DEFAULT 1'],
   ['usuarios', 'notif_ativa', 'INTEGER NOT NULL DEFAULT 1'],
   ['agendamentos', 'atraso_min', 'INTEGER NOT NULL DEFAULT 0'],
+        ['agendamentos', 'grupo', 'TEXT'],
   ['agendamentos', 'concluido_em', 'TEXT'],
 ];
 

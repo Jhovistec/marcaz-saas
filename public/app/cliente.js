@@ -19,7 +19,7 @@ const estado = {
   ultimaVisita: null,
   atrasoMin: 0,
   data: hojeISO(),
-  servico: null,
+  escolhidos: [],      // serviços marcados, na ordem da agenda
   profissional: null,
   hora: null,
   slots: [],
@@ -274,23 +274,46 @@ function boasVindas() {
   return el('div', { class: 'boas-vindas entra' }, conteudo);
 }
 
+/** Junta na tela os serviços que o cliente marcou na mesma visita. */
+function agruparVisitas(lista) {
+  const mapa = new Map();
+  for (const a of lista) {
+    const chave = a.grupo || `s-${a.id}`;
+    if (!mapa.has(chave)) {
+      mapa.set(chave, { chave, id: a.id, data: a.data, hora: a.hora, profissional: a.profissional,
+        servicos: [], preco_cent: 0, duracao_min: 0, fim: a.hora });
+    }
+    const v = mapa.get(chave);
+    v.servicos.push(a.servico);
+    v.preco_cent += a.preco_cent;
+    v.duracao_min += a.duracao_min;
+    if (a.hora < v.hora) v.hora = a.hora;
+    const [hh, mm] = a.hora.split(':').map(Number);
+    const termino = `${String(Math.floor((hh * 60 + mm + a.duracao_min) / 60)).padStart(2, '0')}:${String((hh * 60 + mm + a.duracao_min) % 60).padStart(2, '0')}`;
+    if (termino > v.fim) v.fim = termino;
+  }
+  return [...mapa.values()].sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora));
+}
+
 function blocoMeusAgendamentos() {
   if (!estado.agendamentos.length) return null;
+  const visitas = agruparVisitas(estado.agendamentos);
   const LIMITE_VISIVEL = 3;
-  const mostrarTodos = estado.verTodosAgendamentos || estado.agendamentos.length <= LIMITE_VISIVEL;
-  const visiveis = mostrarTodos ? estado.agendamentos : estado.agendamentos.slice(0, LIMITE_VISIVEL);
+  const mostrarTodos = estado.verTodosAgendamentos || visitas.length <= LIMITE_VISIVEL;
+  const visiveis = mostrarTodos ? visitas : visitas.slice(0, LIMITE_VISIVEL);
   const itens = visiveis.map((a) =>
     el('div', { class: 'meu-ag' },
       el('div', {},
-        el('div', { class: 'meu-ag-quando' }, `${dataLonga(a.data)} · ${a.hora}`),
-        el('div', { style: 'font-weight:750;margin-top:3px' }, a.servico),
-        el('div', { class: 'mini muted', style: 'margin-top:2px' }, `com ${a.profissional}`)
+        el('div', { class: 'meu-ag-quando' }, `${dataLonga(a.data)} · ${a.hora}${a.servicos.length > 1 ? ` – ${a.fim}` : ''}`),
+        el('div', { style: 'font-weight:750;margin-top:3px' }, a.servicos.join(' + ')),
+        el('div', { class: 'mini muted', style: 'margin-top:2px' },
+          `com ${a.profissional} · ⏱ ${a.duracao_min}min · ${brl(a.preco_cent)}`)
       ),
       el('button', {
         class: 'btn btn-perigo btn-mini', type: 'button',
         onclick: async (ev) => {
           const botao = ev.currentTarget;
-          if (!confirm(`Cancelar ${a.servico} em ${dataLonga(a.data)} às ${a.hora}?`)) return;
+          if (!confirm(`Cancelar ${a.servicos.join(' + ')} em ${dataLonga(a.data)} às ${a.hora}?`)) return;
           botao.disabled = true;
           botao.textContent = '…';
           try {
@@ -310,11 +333,11 @@ function blocoMeusAgendamentos() {
     ? el('button', {
       class: 'btn btn-fantasma btn-bloco btn-mini', type: 'button', style: 'margin-top:10px',
       onclick: () => { estado.verTodosAgendamentos = true; telaAgendamento(); },
-    }, `Ver todos os ${estado.agendamentos.length} agendamentos`)
+    }, `Ver todas as ${visitas.length} visitas`)
     : null;
 
   return el('div', { class: 'card' },
-    el('div', { class: 'card-titulo' }, 'Meus agendamentos', el('span', { class: 'tag prim' }, String(estado.agendamentos.length))),
+    el('div', { class: 'card-titulo' }, 'Meus agendamentos', el('span', { class: 'tag prim' }, String(visitas.length))),
     itens,
     mais
   );
@@ -415,11 +438,47 @@ function blocoDatas() {
   );
 }
 
+/* ---- helpers do bloco de serviços ---- */
+const duracaoTotal = () => estado.escolhidos.reduce((a, s) => a + s.duracao_min, 0);
+const precoTotal = () => estado.escolhidos.reduce((a, s) => a + s.preco_cent, 0);
+
+function linhaResumoBloco() {
+  if (!estado.escolhidos.length) return null;
+  return el('div', { class: 'bloco-resumo' },
+    el('div', { class: 'bloco-resumo-itens' },
+      estado.escolhidos.map((sv, i) =>
+        el('span', { class: 'bloco-item' },
+          el('span', { class: 'bloco-n' }, String(i + 1)),
+          `${sv.nome} · ${sv.duracao_min}min`,
+          el('button', {
+            class: 'bloco-x', type: 'button', 'aria-label': `Remover ${sv.nome}`,
+            onclick: () => { estado.escolhidos = estado.escolhidos.filter((x) => x.id !== sv.id); estado.hora = null; estado.verTodosHorarios = false; atualizarSecaoServicos(); },
+          }, '×')
+        )
+      )
+    ),
+    el('div', { class: 'entre', style: 'margin-top:10px' },
+      el('span', { class: 'mini muted' }, `⏱ ${duracaoTotal()} min no total`),
+      el('span', { class: 'preco' }, brl(precoTotal()))
+    )
+  );
+}
+
+function atualizarSecaoServicos() {
+  const alvo = document.getElementById('blocoServicos');
+  if (alvo) alvo.replaceWith(blocoServicos());
+  const h = document.getElementById('blocoHorarios');
+  if (h) h.replaceWith(blocoHorarios());
+  atualizarBarra();
+}
+
 function blocoServicos() {
   const itens = estado.servicos.map((s) => {
-    const sel = estado.servico && estado.servico.id === s.id;
+    const idx = estado.escolhidos.findIndex((x) => x.id === s.id);
+    const sel = idx > -1;
+    const ordem = el('div', { class: `marca${sel ? ' marcada' : ''}` }, sel ? String(idx + 1) : '');
     const bloco = el('div', { class: `servico${sel ? ' sel' : ''}` },
-      el('div', { class: 'marca' }, sel ? '✓' : ''),
+      ordem,
       el('div', { class: 'servico-info' },
         el('div', { class: 'servico-nome' }, s.nome),
         el('div', { class: 'servico-dur' }, `⏱ ${s.duracao_min} min`),
@@ -431,20 +490,20 @@ function blocoServicos() {
       )
     );
     bloco.onclick = async () => {
-      estado.servico = sel ? null : s;
+      if (sel) estado.escolhidos = estado.escolhidos.filter((x) => x.id !== s.id);
+      else estado.escolhidos = [...estado.escolhidos, s];
       estado.hora = null;
       estado.verTodosHorarios = false;
-      telaAgendamento();
       await carregarHorarios();
-      const alvo = document.getElementById('blocoHorarios');
-      if (alvo) alvo.replaceWith(blocoHorarios());
-      atualizarBarra();
+      atualizarSecaoServicos();
     };
     return bloco;
   });
-  return el('div', { class: 'card' },
-    el('div', { class: 'card-titulo' }, 'Escolha o serviço'),
-    itens.length ? itens : el('div', { class: 'vazio' }, 'Nenhum serviço disponível no momento.')
+  return el('div', { class: 'card', id: 'blocoServicos' },
+    el('div', { class: 'card-titulo' }, 'Escolha os serviços',
+      el('span', { class: 'mini muted' }, estado.escolhidos.length ? `${estado.escolhidos.length} selecionado(s)` : 'pode marcar mais de um')),
+    itens.length ? itens : el('div', { class: 'vazio' }, 'Nenhum serviço disponível no momento.'),
+    linhaResumoBloco()
   );
 }
 
@@ -460,11 +519,9 @@ function blocoProfissionais() {
     chip.onclick = async () => {
       estado.profissional = sel ? null : p;
       estado.hora = null;
-      telaAgendamento();
+      estado.verTodosHorarios = false;
       await carregarHorarios();
-      const alvo = document.getElementById('blocoHorarios');
-      if (alvo) alvo.replaceWith(blocoHorarios());
-      atualizarBarra();
+      atualizarSecaoServicos();
     };
     return chip;
   });
@@ -476,7 +533,7 @@ function blocoProfissionais() {
 
 function blocoHorarios() {
   let conteudo;
-  if (!estado.servico) {
+  if (!estado.escolhidos.length) {
     conteudo = el('div', { class: 'vazio' }, el('span', { class: 'vazio-icone' }, '✂️'), 'Escolha um serviço acima para ver os horários livres.');
   } else if (estado.carregandoSlots) {
     conteudo = el('div', { class: 'horarios' }, Array.from({ length: 6 }, () => el('div', { class: 'esqueleto', style: 'height:44px' })));
@@ -517,9 +574,12 @@ function blocoHorarios() {
 
 async function carregarHorarios() {
   estado.slots = [];
-  if (!estado.servico) return;
+  if (!estado.escolhidos.length) return;
   estado.carregandoSlots = true;
-  const params = new URLSearchParams({ data: estado.data, servico_id: estado.servico.id });
+  const params = new URLSearchParams({
+    data: estado.data,
+    servico_ids: estado.escolhidos.map((s) => s.id).join(','),
+  });
   if (estado.profissional) params.set('profissional_id', estado.profissional.id);
   try {
     const r = await get(`/api/publico/empresa/${encodeURIComponent(slug)}/horarios?${params}`);
@@ -535,18 +595,22 @@ let barraAtual = null;
 
 function atualizarBarra() {
   if (!barraAtual) return;
-  const s = estado.servico;
-  const resumo = s
+  const n = estado.escolhidos.length;
+  const resumo = n
     ? el('div', { class: 'resumo' },
-      el('strong', {}, s.nome),
-      ` · ${dataLonga(estado.data)}${estado.hora ? ` às ${estado.hora}` : ''} · ${brl(s.preco_cent)}`)
-    : el('div', { class: 'resumo' }, 'Selecione um serviço para continuar');
+      el('strong', {}, n === 1 ? estado.escolhidos[0].nome : `${n} serviços`),
+      ` · ${dataLonga(estado.data)}${estado.hora ? ` às ${estado.hora}` : ''}`,
+      ` · ⏱ ${duracaoTotal()}min`,
+      ` · ${brl(precoTotal())}`)
+    : el('div', { class: 'resumo' }, 'Selecione um ou mais serviços para continuar');
 
   const botao = el('button', {
     class: 'btn btn-bloco', type: 'button',
     disabled: estado.hora ? null : '',
     onclick: confirmar,
-  }, estado.hora ? `Confirmar ${estado.hora}` : 'Escolha um horário');
+  }, estado.hora
+    ? `Confirmar ${estado.hora} · ${brl(precoTotal())}`
+    : 'Escolha um horário');
 
   barraAtual.querySelector('.barra-conteudo').replaceChildren(resumo, botao);
 }
@@ -569,7 +633,7 @@ function telaAgendamento() {
         await post('/api/auth/logout', {});
         estado.cliente = null;
         estado.agendamentos = [];
-        estado.servico = null;
+        estado.escolhidos = [];
         estado.hora = null;
         barraAtual?.remove();
         barraAtual = null;
@@ -599,20 +663,26 @@ function telaAgendamento() {
 
 async function confirmar() {
   if (!estado.hora) return;
-  if (estado.agendamentos.length > 0) return abrirModal('modalDuplo');
+  // ele já marcou serviços AGORA (bloco novo) e tem outros pendentes? avisa.
+  const temPendentesOutroDia = estado.agendamentos.some(
+    (a) => !(a.data === estado.data && String(a.hora).slice(0, 2) === estado.hora.slice(0, 2))
+  );
+  if (estado.agendamentos.length > 0 && temPendentesOutroDia) return abrirModal('modalDuplo');
   return enviarAgendamento();
 }
 
 async function enviarAgendamento() {
   fecharModal('modalDuplo');
   try {
-    const r = await post('/api/publico/agendamentos', {
-      servico_id: estado.servico.id,
+    const r = await post('/api/publico/agendamentos/bloco', {
+      servico_ids: estado.escolhidos.map((s) => s.id),
       profissional_id: estado.profissional ? estado.profissional.id : estado.profissionais[0]?.id,
       data: estado.data,
       hora: estado.hora,
     });
-    estado.ultimoAgendamento = r.agendamento;
+    estado.ultimoBloco = r;
+    estado.escolhidos = [];
+    estado.hora = null;
     await carregarMeusAgendamentos();
     telaFinal();
   } catch (e) {
@@ -627,7 +697,7 @@ function telaFinal() {
   barraAtual?.remove();
   barraAtual = null;
   const e = estado.empresa;
-  const a = estado.ultimoAgendamento;
+  const b = estado.ultimoBloco;
   const redes = [];
   if (e.instagram) redes.push(el('a', { class: 'rede', href: e.instagram, target: '_blank', rel: 'noopener' }, '📷 Instagram'));
   if (e.whatsapp) redes.push(el('a', { class: 'rede', href: `https://wa.me/${e.whatsapp}`, target: '_blank', rel: 'noopener' }, '💬 WhatsApp'));
@@ -638,11 +708,17 @@ function telaFinal() {
       el('div', { class: 'final-selo' }, '✓'),
       el('div', { class: 'final-titulo' }, 'Agendamento confirmado!'),
       el('div', { class: 'final-info' }, 'Enviamos o resumo para você. Chegue com 5 minutinhos de antecedência.'),
-      a ? el('div', { class: 'final-cartao' },
-        el('div', { class: 'final-cartao-linha' }, el('span', {}, 'Serviço'), el('span', {}, a.servico)),
-        el('div', { class: 'final-cartao-linha' }, el('span', {}, 'Profissional'), el('span', {}, a.profissional)),
-        el('div', { class: 'final-cartao-linha' }, el('span', {}, 'Quando'), el('span', {}, `${dataLonga(a.data)} · ${a.hora}`)),
-        el('div', { class: 'final-cartao-linha' }, el('span', {}, 'Valor'), el('span', { style: 'color:var(--prim)' }, brl(a.preco_cent)))
+      b ? el('div', { class: 'final-cartao' },
+        b.itens.map((i) =>
+          el('div', { class: 'final-cartao-linha' },
+            el('span', {}, i.servico),
+            el('span', {}, `${i.inicio} – ${i.fim}`)
+          )
+        ),
+        el('div', { class: 'final-cartao-linha' }, el('span', {}, 'Profissional'), el('span', {}, b.profissional)),
+        el('div', { class: 'final-cartao-linha' }, el('span', {}, 'Quando'), el('span', {}, `${dataLonga(b.data)} · a partir de ${b.inicio}`)),
+        el('div', { class: 'final-cartao-linha' }, el('span', {}, 'Duração'), el('span', {}, `⏱ ${b.duracao_total_min} min`)),
+        el('div', { class: 'final-cartao-linha total' }, el('span', {}, 'Total'), el('span', { style: 'color:var(--prim)' }, brl(b.preco_total_cent)))
       ) : null,
       imagemOuInicial(e.logo_url, e.nome, 'final-logo'),
       el('div', { class: 'final-info' },
@@ -655,7 +731,7 @@ function telaFinal() {
       redes.length ? el('div', { class: 'redes', style: 'margin-bottom:22px' }, redes) : null,
       el('button', {
         class: 'btn btn-bloco', type: 'button',
-        onclick: () => { estado.hora = null; estado.servico = null; telaAgendamento(); },
+        onclick: () => { estado.hora = null; telaAgendamento(); },
       }, 'Desejo fazer um novo agendamento'),
       el('button', {
         class: 'btn btn-fantasma btn-bloco', type: 'button', style: 'margin-top:10px',
@@ -663,7 +739,7 @@ function telaFinal() {
           await post('/api/auth/logout', {});
           estado.cliente = null;
           estado.agendamentos = [];
-          estado.servico = null;
+          estado.escolhidos = [];
           estado.hora = null;
           telaLogin();
         },

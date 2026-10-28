@@ -5,6 +5,8 @@ import { exigeLogin, exigeIdNumerico } from '../auth.js';
 import {
   hojeISO,
   slotsDisponiveis,
+  slotsParaBloco,
+  turnoDoBloco,
   precoVigente,
   haConflito,
   podeCancelar,
@@ -73,16 +75,37 @@ router.get('/empresa/:slug', async (req, res) => {
 router.get('/empresa/:slug/horarios', async (req, res) => {
   const e = await empresaPorSlug(req.params.slug);
   if (!e) return res.status(404).json({ erro: 'Estabelecimento não encontrado.' });
-  const { data, servico_id, profissional_id } = req.query;
-  const serv = await db.prepare('SELECT * FROM servicos WHERE id = ? AND empresa_id = ?').get(servico_id, e.id);
-  if (!serv) return res.status(400).json({ erro: 'Serviço inválido.' });
-  const livres = await slotsDisponiveis({
-    empresa: e,
+  const { data, servico_id, servico_ids, profissional_id } = req.query;
+  // aceita um serviço (?servico_id=1) ou um bloco (?servico_ids=1,3,4)
+  const ids = (servico_ids ? String(servico_ids) : String(servico_id || ''))
+    .split(',').map((v) => Number(v)).filter(Boolean);
+  if (!ids.length) return res.status(400).json({ erro: 'Serviço inválido.' });
+
+  const servicos = [];
+  for (const id of ids) {
+    const sv = await db.prepare('SELECT * FROM servicos WHERE id = ? AND empresa_id = ?').get(id, e.id);
+    if (sv) servicos.push(sv);
+  }
+  if (!servicos.length) return res.status(400).json({ erro: 'Serviço inválido.' });
+
+  const livres = servicos.length === 1
+    ? await slotsDisponiveis({
+        empresa: e, data,
+        duracaoMin: servicos[0].duracao_min,
+        profissionalId: profissional_id ? Number(profissional_id) : null,
+      })
+    : await slotsParaBloco({
+        empresa: e, data,
+        duracoes: servicos.map((x) => x.duracao_min),
+        profissionalId: profissional_id ? Number(profissional_id) : null,
+      });
+
+  res.json({
     data,
-    duracaoMin: serv.duracao_min,
-    profissionalId: profissional_id ? Number(profissional_id) : null,
+    slots: livres,
+    duracao_total_min: servicos.reduce((a, b) => a + b.duracao_min, 0),
+    servicos: servicos.length,
   });
-  res.json({ data, slots: livres });
 });
 
 // Cliente logado: dados dele + agendamentos + histórico de última visita
@@ -189,6 +212,86 @@ router.post('/agendamentos', exigeLogin, async (req, res) => {
   });
 });
 
+// Agendar um bloco de serviços (o cliente marca 2, 3… serviços de uma vez)
+router.post('/agendamentos/bloco', exigeLogin, async (req, res) => {
+  const u = req.usuario;
+  if (u.papel !== 'cliente') return res.status(403).json({ erro: 'Rota do cliente.' });
+  const { servico_ids, profissional_id, data, hora } = req.body || {};
+  const ids = Array.isArray(servico_ids) ? servico_ids.map(Number).filter(Boolean) : [];
+  if (!ids.length) return res.status(400).json({ erro: 'Escolha ao menos um serviço.' });
+  if (!data || !hora) return res.status(400).json({ erro: 'Escolha data e horário.' });
+
+  const e = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(u.empresa_id);
+  if (!e || e.status !== 'ativa') return res.status(403).json({ erro: 'Estabelecimento indisponível.' });
+  if (data < hojeISO()) return res.status(400).json({ erro: 'Não é possível agendar no passado.' });
+
+  // ordem escolhida = ordem dos serviços na agenda
+  const servicos = [];
+  for (const id of ids) {
+    const sv = await db.prepare('SELECT * FROM servicos WHERE id = ? AND empresa_id = ? AND ativo = 1').get(id, e.id);
+    if (!sv) return res.status(400).json({ erro: 'Um dos serviços não está disponível.' });
+    servicos.push(sv);
+  }
+
+  const prof = await db.prepare(`SELECT * FROM usuarios WHERE id = ? AND empresa_id = ? AND ativo = 1`).get(profissional_id, e.id);
+  if (!prof) return res.status(400).json({ erro: 'Profissional inválido.' });
+
+  const duracoes = servicos.map((sv) => sv.duracao_min);
+  const livres = await slotsParaBloco({ empresa: e, data, duracoes, profissionalId: prof.id });
+  if (!livres.includes(hora)) {
+    return res.status(409).json({ erro: 'Não há espaço para todos esses serviços neste horário. Escolha outro.' });
+  }
+
+  const turnos = turnoDoBloco({ hora, duracoes });
+  const grupo = `${u.id}-${Date.now().toString(36)}`;
+  const itens = [];
+  let total_cent = 0;
+
+  for (let i = 0; i < servicos.length; i++) {
+    const sv = servicos[i];
+    const { preco_cent } = await precoVigente(sv, e.id, data);
+    total_cent += preco_cent;
+    const info = await db
+      .prepare(
+        `INSERT INTO agendamentos
+         (empresa_id, cliente_id, profissional_id, servico_id, data, hora, duracao_min, preco_cent, grupo, criado_por)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`
+      )
+      .run(e.id, u.id, prof.id, sv.id, data, turnos[i].inicio, sv.duracao_min, preco_cent, grupo, u.id);
+    itens.push({
+      id: info.lastInsertRowid,
+      servico: sv.nome,
+      inicio: turnos[i].inicio,
+      fim: turnos[i].fim,
+      duracao_min: sv.duracao_min,
+      preco_cent,
+    });
+  }
+
+  await notificarNovoAgendamento({
+    empresaId: e.id,
+    profissionalId: prof.id,
+    agendamentoId: itens[0].id,
+    servico: itens.map((i) => i.servico).join(' + '),
+    cliente: u.nome,
+    data,
+    hora,
+    avulso: false,
+  });
+
+  res.status(201).json({
+    grupo,
+    profissional: prof.nome,
+    data,
+    inicio: hora,
+    termino: turnos[turnos.length - 1].fim,
+    duracao_total_min: duracoes.reduce((a, b) => a + b, 0),
+    preco_total_cent: total_cent,
+    itens,
+    empresa: perfilEmpresa(e),
+  });
+});
+
 // Cancelar (cliente) — trava de 15 minutos
 router.post('/agendamentos/:id/cancelar', exigeLogin, exigeIdNumerico, async (req, res) => {
   const u = req.usuario;
@@ -199,6 +302,12 @@ router.post('/agendamentos/:id/cancelar', exigeLogin, exigeIdNumerico, async (re
     return res.status(409).json({
       erro: 'Faltam 15 minutos ou menos para o seu horário. Fale com o estabelecimento pelo WhatsApp.',
     });
+  }
+  // se os serviços foram marcados juntos, o cancelamento vale para a visita toda
+  if (ag.grupo) {
+    await db.prepare("UPDATE agendamentos SET status = 'cancelado' WHERE grupo = ? AND cliente_id = ? AND status = 'agendado'")
+      .run(ag.grupo, u.id);
+    return res.json({ ok: true, visita: true });
   }
   await db.prepare("UPDATE agendamentos SET status = 'cancelado' WHERE id = ?").run(ag.id);
   res.json({ ok: true });

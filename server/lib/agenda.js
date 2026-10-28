@@ -86,6 +86,67 @@ export async function slotsDisponiveis({ empresa, data, duracaoMin = 30, profiss
   return livres;
 }
 
+/**
+ * Slots em que um BLOCO de vários serviços seguidos cabe.
+ * duracoes: duração (min) de cada serviço, na ordem em que serão prestados.
+ */
+export async function slotsParaBloco({ empresa, data, duracoes, profissionalId = null }) {
+  const total = duracoes.reduce((a, b) => a + b, 0);
+  if (!total) return [];
+  const dias = String(empresa.dias_semana).split(',').map(Number);
+  if (!dias.includes(diaSemana(data))) return [];
+
+  const abertura = minutos(empresa.aberto_hora);
+  const fechamento = minutos(empresa.fecha_hora);
+  const passo = empresa.intervalo_min || 30;
+
+  let minimo = abertura;
+  const agora = new Date();
+  if (data === hojeISO(agora)) {
+    const arredondado = Math.ceil((agora.getHours() * 60 + agora.getMinutes() + 1) / 15) * 15;
+    minimo = Math.max(abertura, arredondado);
+  }
+  if (data < hojeISO(agora)) return [];
+
+  const filtros = ['empresa_id = ?', 'data = ?', "status <> 'cancelado'"];
+  const args = [empresa.id, data];
+  if (profissionalId) {
+    filtros.push('profissional_id = ?');
+    args.push(profissionalId);
+  }
+  const ocupados = await db
+    .prepare(`SELECT hora, duracao_min FROM agendamentos WHERE ${filtros.join(' AND ')}`)
+    .all(...args);
+
+  const livres = [];
+  for (let m = abertura; m + total <= fechamento; m += passo) {
+    if (m < minimo) continue;
+    // cada serviço do bloco, um após o outro
+    let cursor = m;
+    let ok = true;
+    for (const d of duracoes) {
+      const ini = cursor;
+      const fim = cursor + d;
+      cursor = fim;
+      if (fim > fechamento) { ok = false; break; }
+      if (chocaAlmoco(empresa, ini, fim)) { ok = false; break; }
+      if (ocupados.some((o) => ini < minutos(o.hora) + o.duracao_min && fim > minutos(o.hora))) { ok = false; break; }
+    }
+    if (ok) livres.push(hhmm(m));
+  }
+  return livres;
+}
+
+/** Turno (hora de início e fim) de cada serviço do bloco, a partir de `hora`. */
+export function turnoDoBloco({ hora, duracoes }) {
+  let cursor = minutos(hora);
+  return duracoes.map((d) => {
+    const inicio = cursor;
+    cursor += d;
+    return { inicio: hhmm(inicio), fim: hhmm(cursor), duracao: d };
+  });
+}
+
 export async function haConflito({ empresaId, profissionalId, data, hora, duracaoMin, ignorarId = null }) {
   const ini = minutos(hora);
   const fim = ini + duracaoMin;
