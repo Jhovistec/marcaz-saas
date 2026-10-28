@@ -64,6 +64,18 @@ export async function limpaSessoesVencidas() {
 
 // ---- middlewares -----------------------------------------------------------
 
+// Bloqueia /:id com lixo ('undefined', 'abc') antes de chegar ao SQL:
+// no PostgreSQL isso derruba a consulta inteira.
+export function exigeIdNumerico(req, res, next) {
+  const alvo = req.params.id;
+  if (alvo === undefined) return next();
+  if (!/^\d+$/.test(String(alvo))) {
+    return res.status(400).json({ erro: 'Registro inválido.' });
+  }
+  req.params.id = Number(alvo);
+  next();
+}
+
 export function leCookie(req, nome) {
   const raw = req.headers.cookie || '';
   for (const par of raw.split(';')) {
