@@ -195,6 +195,33 @@ select {
   max-height: 90vh; overflow: auto; animation: sobe 0.2s ease-out;
 }
 .modal h3 { font-size: 1.05rem; margin-bottom: 6px; letter-spacing: -0.01em; }
+.modal-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.modal-x {
+  width: 32px; height: 32px; flex: 0 0 auto; border-radius: 50%;
+  background: var(--bg-2); border: 1px solid var(--linha); color: var(--txt-2);
+  font-size: 1.25rem; line-height: 1; cursor: pointer; font-family: inherit;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.modal-x:hover { color: var(--acento); border-color: var(--acento); background: color-mix(in srgb, var(--acento) 10%, transparent); }
+.modal-rodape {
+  display: flex; align-items: center; gap: 10px; margin-top: 18px;
+  padding-top: 14px; border-top: 1px solid var(--linha-suave);
+}
+
+/* ---- avisos flutuantes ---- */
+.toastbox {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; z-index: 200;
+  display: flex; flex-direction: column; gap: 8px; width: min(430px, calc(100vw - 32px));
+}
+.toast {
+  background: linear-gradient(180deg, var(--card), var(--card-2));
+  border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent);
+  border-left: 3px solid var(--ok);
+  color: var(--txt); border-radius: 12px; padding: 12px 14px; font-size: 0.84rem;
+  box-shadow: var(--sombra); cursor: pointer; animation: entra 0.22s ease-out;
+}
+.toast-erro { border-color: color-mix(in srgb, var(--acento) 45%, transparent); border-left-color: var(--acento); }
+.toast.saindo { opacity: 0; transform: translateY(6px); transition: opacity 0.3s, transform 0.3s; }
 .modal-sub { font-size: 0.82rem; color: var(--txt-2); margin-bottom: 18px; line-height: 1.5; }
 
 @keyframes aparece { from { opacity: 0; } to { opacity: 1; } }

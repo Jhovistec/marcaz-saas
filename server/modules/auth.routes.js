@@ -8,11 +8,8 @@ const router = express.Router();
 const normTel = (v) => String(v || '').replace(/\D/g, '');
 const normCpf = (v) => String(v || '').replace(/\D/g, '');
 
-function setCookie(res, token) {
-  res.setHeader(
-    'Set-Cookie',
-    `marcaz_sessao=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 86400}`
-  );
+function setCookie(res, token, nome = 'marcaz_sessao') {
+  res.append('Set-Cookie', `${nome}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 86400}`);
 }
 
 function publico(u) {
@@ -151,7 +148,7 @@ router.post('/control/login', async (req, res) => {
   if (!u || !verificaSenha(senha, u.senha_hash)) {
     return res.status(401).json({ erro: 'Usuário ou senha incorretos.' });
   }
-  setCookie(res, await criaToken(u.id));
+  setCookie(res, await criaToken(u.id), 'marcaz_control');
   res.json({ usuario: publico(u) });
 });
 
@@ -162,7 +159,13 @@ router.post('/logout', async (req, res) => {
 });
 
 router.get('/eu', async (req, res) => {
-  if (!req.usuario) return res.status(401).json({ erro: 'Sem sessão.' });
+  // ?escopo=control → usa a sessão da equipe Jhovis (cookie marcamz_control)
+  if (req.query.escopo === 'control') {
+    if (!req.master) return res.status(401).json({ erro: 'Sem sessão.' });
+    return res.json({ usuario: publico(req.master), empresa: null, hoje: hojeISO() });
+  }
+  if (!req.usuario && !req.master) return res.status(401).json({ erro: 'Sem sessão.' });
+  if (!req.usuario) req.usuario = req.master;
   const emp = req.usuario.empresa_id
     ? await db.prepare('SELECT slug, nome, status FROM empresas WHERE id = ?').get(req.usuario.empresa_id)
     : null;

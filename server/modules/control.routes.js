@@ -1,12 +1,12 @@
 // Marcaz Control — painel da Jhovis. Só papel master.
 import express from 'express';
 import { db } from '../db.js';
-import { exigePapel, exigeIdNumerico, hashSenha } from '../auth.js';
+import { exigeMaster, exigeIdNumerico, hashSenha } from '../auth.js';
 import { hojeISO } from '../lib/agenda.js';
 import { normalizaDiasAgenda } from '../lib/janela.js';
 
 const router = express.Router();
-router.use(exigePapel('master'));
+router.use(exigeMaster);
 
 const slugify = (s) =>
   String(s || '')
@@ -51,6 +51,10 @@ router.post('/empresas', async (req, res) => {
   if (!senha || String(senha).length < 4) return res.status(400).json({ erro: 'Defina uma senha de acesso com pelo menos 4 caracteres.' });
 
   let s = slug ? slugify(slug) : slugify(nome);
+  if (!s) return res.status(400).json({ erro: 'Informe um nome para o estabelecimento.' });
+  if (slug && await db.prepare('SELECT id FROM empresas WHERE slug = ?').get(s)) {
+    return res.status(409).json({ erro: `O link "/${s}" já pertence a outra empresa. Escolha outro ou deixe o campo em branco para gerarmos automaticamente.` });
+  }
   let n = 1;
   while (await db.prepare('SELECT id FROM empresas WHERE slug = ?').get(s)) s = `${slugify(nome)}-${++n}`;
 

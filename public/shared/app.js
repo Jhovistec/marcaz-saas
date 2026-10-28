@@ -144,6 +144,16 @@ export function limpaAviso(elemento) {
 export function abrirModal(id) {
   const m = document.getElementById(id);
   if (m) m.classList.add('aberto');
+  if (!window.__marcazEsc) {
+    window.__marcazEsc = true;
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      document.querySelectorAll('.modal-fundo.aberto').forEach((f) => {
+        f.classList.remove('aberto');
+        f.remove();
+      });
+    });
+  }
 }
 export function fecharModal(id) {
   const m = document.getElementById(id);
@@ -156,6 +166,46 @@ export function ligaModalFechamento() {
       if (e.target === fundo) fundo.classList.remove('aberto');
     });
   });
+}
+
+/** Aviso flutuante (toast) — substitui alert() nas confirmações. */
+export function sucesso(texto, tipo = 'ok') {
+  let caixa = document.getElementById('toastbox');
+  if (!caixa) {
+    caixa = el('div', { id: 'toastbox', class: 'toastbox', role: 'status', 'aria-live': 'polite' });
+    document.body.append(caixa);
+  }
+  const t = el('div', { class: `toast toast-${tipo}` }, texto);
+  caixa.append(t);
+  setTimeout(() => {
+    t.classList.add('saindo');
+    setTimeout(() => t.remove(), 320);
+  }, 4200);
+  t.addEventListener('click', () => t.remove());
+}
+
+/**
+ * Janela padrão: título, botão × no canto, rodapé com Cancelar,
+ * fecha com Esc ou clicando fora. O corpo (formulário) entra entre eles.
+ */
+export function janelaModal(id, titulo, subtitulo, corpo, rotuloCancelar = 'Cancelar') {
+  const fechar = () => {
+    fecharModal(id);
+    document.getElementById(id)?.remove();
+  };
+  const cabecalho = el('div', { class: 'modal-cab' },
+    el('div', {},
+      el('h3', { style: 'margin:0' }, titulo),
+      subtitulo ? el('p', { class: 'modal-sub', style: 'margin:4px 0 0' }, subtitulo) : null
+    ),
+    el('button', { class: 'modal-x', type: 'button', 'aria-label': 'Fechar sem salvar', onclick: fechar }, '×')
+  );
+  const rodape = el('div', { class: 'modal-rodape' },
+    el('span', { class: 'mini muted', style: 'margin-right:auto' }, 'Você pode fechar sem salvar.'),
+    el('button', { class: 'btn btn-fantasma', type: 'button', onclick: fechar }, rotuloCancelar)
+  );
+  return el('div', { class: 'modal-fundo', id },
+    el('div', { class: 'modal', style: 'max-width:560px' }, cabecalho, corpo, rodape));
 }
 
 /* Rodapé obrigatório da Jhovis em todas as telas */
