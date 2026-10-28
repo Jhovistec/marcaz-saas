@@ -1,5 +1,6 @@
 // Ponto de entrada da Vercel (Serverless Function).
 // Reaproveita o mesmo Express do `npm start`, sem duplicar rotas.
+import app from '../server/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,7 +35,7 @@ export default async function handler(req, res) {
     return res.end(JSON.stringify(inventario(), null, 2));
   }
   try {
-    const app = await iniciar();
+    await app.iniciar();
     return app(req, res);
   } catch (e) {
     res.statusCode = 500;

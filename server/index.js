@@ -94,5 +94,7 @@ if (process.argv[1] && /index\.js$/.test(process.argv[1])) {
   });
 }
 
-export { iniciar };
+// Um único export (default) — o empacotador da Vercel trata re-export nomeado
+// de forma inconsistente quando a função é empacotada em um arquivo só.
+app.iniciar = iniciar;
 export default app;
