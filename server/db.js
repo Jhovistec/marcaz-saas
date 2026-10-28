@@ -46,10 +46,12 @@ const COLUNAS = `
 `;
 
 export function schema(modo = MODO) {
+  // Mantém "id INTEGER" no texto e troca só o que vem depois do tipo,
+  // preservando o nome da coluna nas duas tabelas.
   const pk =
     modo === 'postgres'
-      ? 'INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY'
-      : 'INTEGER PRIMARY KEY AUTOINCREMENT';
+      ? 'GENERATED ALWAYS AS IDENTITY PRIMARY KEY'
+      : 'PRIMARY KEY AUTOINCREMENT';
   const now =
     modo === 'postgres'
       ? `(to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS'))`
@@ -144,7 +146,7 @@ CREATE TABLE IF NOT EXISTS sessoes (
   usuario_id    INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
   expira_em     TEXT NOT NULL
 );
-`.replace(/\w*\s*INTEGER PRIMARY KEY \{PK\}/g, pk).replace(/\{NOW\}/g, now);
+`.replace(/INTEGER PRIMARY KEY \{PK\}/g, `INTEGER ${pk}`).replace(/\{NOW\}/g, now);
 }
 
 /** Colunas que nem todo banco criado em versão antiga tinha. */

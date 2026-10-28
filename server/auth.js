@@ -25,7 +25,11 @@ function assina(payload) {
 }
 
 export async function criaToken(usuarioId) {
-  const expira = new Date(Date.now() + DIAS_SESSAO * 864e5).toISOString();
+  // Formato 'AAAA-MM-DD HH:MM:SS' em UTC — compara corretamente em SQLite e Postgres
+  const expira = new Date(Date.now() + DIAS_SESSAO * 864e5)
+    .toISOString()
+    .slice(0, 19)
+    .replace('T', ' ');
   const payload = Buffer.from(JSON.stringify({ uid: usuarioId, exp: expira })).toString('base64url');
   const token = `${payload}.${assina(payload)}`;
   await db.prepare('INSERT INTO sessoes (token, usuario_id, expira_em) VALUES (?,?,?)').run(token, usuarioId, expira);

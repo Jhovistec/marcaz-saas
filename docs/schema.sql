@@ -1,8 +1,9 @@
--- Marcaz - schema para Supabase (PostgreSQL). Cole tudo no SQL Editor e clique Run.
+-- Marcaz - esquema do banco para colar no SQL Editor do Supabase
+-- Como usar: SQL Editor > New query > cole tudo > Run
 
 
 CREATE TABLE IF NOT EXISTS empresas (
-  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   slug          TEXT NOT NULL UNIQUE,
   nome          TEXT NOT NULL,
   razao_social  TEXT,
@@ -31,7 +32,7 @@ CREATE TABLE IF NOT EXISTS empresas (
 );
 
 CREATE TABLE IF NOT EXISTS usuarios (
-  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   empresa_id    INTEGER REFERENCES empresas(id) ON DELETE CASCADE,
   nome          TEXT NOT NULL,
   telefone      TEXT,
@@ -49,7 +50,7 @@ CREATE INDEX IF NOT EXISTS ix_usuarios_empresa ON usuarios(empresa_id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_tel ON usuarios(empresa_id, telefone) WHERE telefone IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS servicos (
-  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   empresa_id    INTEGER NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
   nome          TEXT NOT NULL,
   descricao     TEXT,
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS servicos (
 CREATE INDEX IF NOT EXISTS ix_servicos_empresa ON servicos(empresa_id);
 
 CREATE TABLE IF NOT EXISTS promocoes (
-  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   empresa_id    INTEGER NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
   titulo        TEXT NOT NULL,
   desconto_pct  INTEGER NOT NULL DEFAULT 0,
@@ -79,7 +80,7 @@ CREATE TABLE IF NOT EXISTS promocao_itens (
 );
 
 CREATE TABLE IF NOT EXISTS agendamentos (
-  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   empresa_id      INTEGER NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
   cliente_id      INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
   profissional_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -100,7 +101,7 @@ CREATE INDEX IF NOT EXISTS ix_ag_empresa_data ON agendamentos(empresa_id, data);
 CREATE INDEX IF NOT EXISTS ix_ag_prof ON agendamentos(profissional_id, data);
 
 CREATE TABLE IF NOT EXISTS notificacoes (
-  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   empresa_id     INTEGER NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
   usuario_id     INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
   tipo           TEXT NOT NULL,
