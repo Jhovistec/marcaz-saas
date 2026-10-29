@@ -2,6 +2,7 @@ import {
   get, post, put, patch, del, $, el, brl, brlParaCentavos, mascaraTelefone, mascaraCPF, mascaraCNPJ, mascaraMoeda,
   aviso, limpaAviso, hojeISO, dataLonga, dataCurta, proximosDias, rodapeJhovis,
   abrirModal, fecharModal, ligaModalFechamento, isoParaData, diaCurto, sucesso,
+  imagemComFallback,
 } from '/shared/app.js';
 
 const app = $('#app');
@@ -38,6 +39,35 @@ const PERMS = [
   ['horarios', 'Configurações'],
   ['financeiro', 'Financeiro'],
 ];
+
+/** Lê, redimensiona e devolve a imagem como data URL (guardada no banco). */
+function comprimirImagemParaUrl(arquivo, maxLado) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\//.test(arquivo.type)) return reject(new Error('O arquivo precisa ser uma imagem.'));
+    if (arquivo.size > 6 * 1024 * 1024) return reject(new Error('Imagem muito grande (máx. 6 MB).'));
+    const leitor = new FileReader();
+    leitor.onerror = () => reject(new Error('Falha ao ler o arquivo.'));
+    leitor.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('A imagem está quebrada ou em formato não suportado.'));
+      img.onload = () => {
+        const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * escala));
+        const h = Math.max(1, Math.round(img.height * escala));
+        const tela = document.createElement('canvas');
+        tela.width = w;
+        tela.height = h;
+        tela.getContext('2d').drawImage(img, 0, 0, w, h);
+        let url = tela.toDataURL('image/webp', 0.9);
+        if (!url || url.length < 100) url = tela.toDataURL('image/png');
+        if (url.length > 500_000) return reject(new Error('A imagem ficou grande demais. Tente uma menor.'));
+        resolve(url);
+      };
+      img.src = leitor.result;
+    };
+    leitor.readAsDataURL(arquivo);
+  });
+}
 
 const pode = (chave) => S.contexto && S.contexto.usuario.permissoes.includes(chave);
 
@@ -271,22 +301,55 @@ async function iniciar() {
 
 function telaLogin() {
   // Sem seletor de empresa: quem digita o documento já é dono de uma unidade só.
-  // Assim um empresário nunca vê a lista dos seus concorrentes.
+  // Abas por tipo de acesso (como na tela do cliente) — a máscara segue o tipo
+  // escolhido, porque CPF e celular têm o mesmo tamanho (11 dígitos).
   const alerta = el('div', { class: 'alerta' });
-  const login = el('input', {
-    placeholder: 'CPF, CNPJ, telefone ou e-mail',
-    autocomplete: 'username', inputmode: 'text', spellcheck: 'false',
+
+  const MODOS = {
+    telefone: { label: 'Telefone (funcionário)', placeholder: '(99) 99999-9999', mascara: mascaraTelefone,
+      dica: 'O celular cadastrado pelo proprietário.' },
+    cpf: { label: 'CPF (proprietário)', placeholder: '123.456.789-00', mascara: mascaraCPF,
+      dica: 'Somente os números do seu CPF.' },
+    cnpj: { label: 'CNPJ (empresa)', placeholder: '00.000.000/0000-00', mascara: mascaraCNPJ,
+      dica: 'O CNPJ do seu estabelecimento.' },
+    email: { label: 'E-mail', placeholder: 'voce@empresa.com.br', mascara: null,
+      dica: 'O e-mail cadastrado no acesso.' },
+  };
+  let modo = 'telefone';
+
+  const campo = el('input', {
+    placeholder: MODOS.telefone.placeholder, autocomplete: 'username',
+    inputmode: 'numeric', spellcheck: 'false', 'aria-label': MODOS.telefone.label,
   });
+  const rotulo = el('label', {}, MODOS.telefone.label);
+  const dica = el('div', { class: 'ajuda' }, MODOS.telefone.dica);
+
+  const abas = Object.entries(MODOS).map(([chave, cfg]) => {
+    const b = el('button', { class: `aba${chave === modo ? ' ativa' : ''}`, type: 'button' },
+      cfg.label.split(' (')[0]);
+    b.onclick = () => {
+      modo = chave;
+      for (const x of abas) x.classList.toggle('ativa', x === b);
+      campo.value = '';
+      campo.placeholder = cfg.placeholder;
+      campo.setAttribute('aria-label', cfg.label);
+      campo.inputMode = chave === 'email' ? 'email' : 'numeric';
+      rotulo.textContent = cfg.label;
+      dica.textContent = cfg.dica;
+      limpaAviso(alerta);
+      campo.focus();
+    };
+    return b;
+  });
+
+  campo.addEventListener('input', () => {
+    const cfg = MODOS[modo];
+    if (!cfg.mascara) return;                       // e-mail fica como está
+    const d = campo.value.replace(/\D/g, '');
+    campo.value = cfg.mascara(d);
+  });
+
   const senha = el('input', { type: 'password', placeholder: 'Sua senha', autocomplete: 'current-password' });
-
-  login.addEventListener('input', () => {
-    if (login.value.includes('@')) return;                 // e-mail: deixa como está
-    const d = login.value.replace(/\D/g, '');
-    login.value = d.length <= 11 ? mascaraCPF(d) : mascaraCNPJ(d);
-  });
-
-  const dica = el('div', { class: 'ajuda' },
-    'Proprietário: CPF dele ou o CNPJ da empresa. Funcionário: telefone ou e-mail.');
   const botao = el('button', { class: 'btn btn-bloco', type: 'submit' }, 'Entrar no painel');
 
   if (avisoSessao) {
@@ -301,7 +364,7 @@ function telaLogin() {
       botao.disabled = true;
       botao.textContent = 'Entrando…';
       try {
-        await post('/api/auth/painel/login', { login: login.value, senha: senha.value });
+        await post('/api/auth/painel/login', { login: campo.value, senha: senha.value });
         await iniciar();
       } catch (e) {
         if (trataSessao(e)) return;
@@ -311,11 +374,12 @@ function telaLogin() {
       }
     },
   },
-    el('div', { class: 'campo' }, el('label', {}, 'Acesso do estabelecimento'), login, dica),
+    el('div', { class: 'campo' }, rotulo, el('div', { class: 'abas', style: 'margin-bottom:9px' }, abas), campo, dica),
     el('div', { class: 'campo' }, el('label', {}, 'Senha'), senha),
     alerta,
     botao
   );
+
 
   app.replaceChildren(
     el('div', { class: 'layout' },
@@ -350,6 +414,8 @@ const ABAS = [
 
 function telaPainel() {
   const c = S.contexto;
+  // tema em pré-visualização que não foi salvo não vaza para as outras abas
+  document.documentElement.dataset.tema = c.empresa.tema || 'cyan';
   const abas = ABAS.filter(([, , perm]) => pode(perm));
   if (!abas.some(([id]) => id === S.aba)) S.aba = abas[0][0];
 
@@ -357,7 +423,7 @@ function telaPainel() {
     el('div', { class: 'topbar' },
       el('div', { class: 'topbar-inner' },
         el('div', { class: 'marca' },
-          el('div', { class: 'marca-logo' }, (c.empresa.nome || 'M').charAt(0).toUpperCase()),
+          imagemComFallback(c.empresa.logo_url, c.empresa.nome, 'marca-logo'),
           el('div', { style: 'min-width:0' },
             el('div', { class: 'marca-nome' }, c.empresa.nome),
             el('div', { class: 'marca-sub' }, `${c.usuario.nome} · ${c.usuario.papel === 'dono' ? 'Proprietário' : c.usuario.cargo || 'Profissional'}`)
@@ -994,7 +1060,24 @@ async function abaHorarios(alvo) {
   const nome = campo('Nome do estabelecimento', e.nome);
   const endereco = campo('Endereço', e.endereco);
   const telefone = campo('Telefone', e.telefone);
-  const logo = campo('URL da logomarca', e.logo_url);
+  const logo = campo('URL da logomarca', (e.logo_url || '').startsWith('data:') ? '' : e.logo_url);
+  const btnLogo = el('button', { class: 'btn btn-fantasma btn-mini', type: 'button' }, '📷 Enviar arquivo');
+  const arqLogo = el('input', { type: 'file', accept: 'image/*', class: 'escondido' });
+  btnLogo.onclick = () => arqLogo.click();
+  arqLogo.onchange = async () => {
+    const arquivo = arqLogo.files && arqLogo.files[0];
+    if (!arquivo) return;
+    try {
+      const url = await comprimirImagemParaUrl(arquivo, 256);
+      await put('/api/gestor/empresa', { logo_url: url });
+      S.contexto = await get('/api/gestor/contexto');
+      logo.input.value = '';
+      sucesso('Logomarca atualizada — já está no seu painel e na página do cliente.');
+      telaPainel();
+    } catch (err) {
+      alert(err.message || 'Não foi possível enviar a imagem.');
+    }
+  };
   const instagram = campo('Instagram', e.instagram);
   const whatsapp = campo('WhatsApp (só números, com 55)', e.whatsapp);
   const facebook = campo('Facebook', e.facebook);
@@ -1008,7 +1091,14 @@ async function abaHorarios(alvo) {
     document.getElementById('camposAlmoco').classList.toggle('escondido', !caixaAlmoco.checked);
   });
 
+  const temaAnterior = e.tema;
   const tema = el('select', {}, TEMAS.map(([v, r]) => el('option', { value: v, selected: v === e.tema ? '' : null }, r)));
+  const notaTema = el('div', { class: 'ajuda escondido', style: 'margin-top:4px' },
+    'Pré-visualização do tema. Clique em Salvar configurações para manter.');
+  tema.onchange = () => {
+    document.documentElement.dataset.tema = tema.value;
+    notaTema.classList.toggle('escondido', tema.value === temaAnterior);
+  };
   const intervalo = el('select', {}, [15, 20, 30, 45, 60].map((v) => el('option', { value: v, selected: v === e.intervalo_min ? '' : null }, `${v} min`)));
   const maxDias = S.contexto.max_dias_agenda || 15;
   const diasAgenda = el('select', {}, Array.from({ length: maxDias - 2 }, (_, i) => i + 3)
@@ -1024,10 +1114,13 @@ async function abaHorarios(alvo) {
     el('div', { class: 'card-titulo' }, 'Identidade do estabelecimento'),
     nome.bloco,
     endereco.bloco,
-    el('div', { class: 'linha-campos' }, telefone.bloco, logo.bloco),
+    el('div', { class: 'linha-campos' }, telefone.bloco,
+      el('div', { class: 'campo' }, el('label', {}, 'Logomarca'),
+        el('div', { class: 'flex', style: 'gap:8px' }, logo.input, btnLogo), arqLogo,
+        el('div', { class: 'ajuda' }, 'Sem logo? Mostra a inicial. Envie um arquivo quadrado (até ~2 MB).'))),
     el('div', { class: 'linha-campos' }, instagram.bloco, whatsapp.bloco),
     facebook.bloco,
-    el('div', { class: 'campo' }, el('label', {}, 'Tema'), tema),
+    el('div', { class: 'campo' }, el('label', {}, 'Tema'), tema, notaTema),
 
     el('div', { class: 'titulo-secao' }, 'Funcionamento'),
     el('div', { class: 'linha-campos' }, abertura.bloco, fechamento.bloco),
@@ -1068,6 +1161,7 @@ async function abaHorarios(alvo) {
           });
           S.contexto = await get('/api/gestor/contexto');
           document.documentElement.dataset.tema = S.contexto.empresa.tema;
+          notaTema.classList.add('escondido');
           aviso(alerta, 'ok', 'Configurações salvas.');
         } catch (e2) {
           aviso(alerta, 'erro', e2.message);

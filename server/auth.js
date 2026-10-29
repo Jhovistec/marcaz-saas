@@ -30,7 +30,10 @@ export async function criaToken(usuarioId) {
     .toISOString()
     .slice(0, 19)
     .replace('T', ' ');
-  const payload = Buffer.from(JSON.stringify({ uid: usuarioId, exp: expira })).toString('base64url');
+  // O nonce evita que dois logins do mesmo usuário no mesmo segundo gerem o
+  // mesmo token (colisão na chave primária de sessões).
+  const nonce = crypto.randomBytes(8).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ uid: usuarioId, exp: expira, n: nonce })).toString('base64url');
   const token = `${payload}.${assina(payload)}`;
   await db.prepare('INSERT INTO sessoes (token, usuario_id, expira_em) VALUES (?,?,?)').run(token, usuarioId, expira);
   return token;

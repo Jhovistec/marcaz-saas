@@ -208,6 +208,18 @@ export function janelaModal(id, titulo, subtitulo, corpo, rotuloCancelar = 'Canc
     el('div', { class: 'modal', style: 'max-width:560px' }, cabecalho, corpo, rodape));
 }
 
+/**
+ * Imagem com fallback: se não houver URL ou a imagem quebrar, mostra a inicial
+ * do nome num círculo colorido. Usado na logo do cliente e do painel.
+ */
+export function imagemComFallback(url, nome, classe) {
+  const inicial = (nome || '?').trim().charAt(0).toUpperCase() || '?';
+  if (!url) return el('div', { class: `${classe} ${classe}-fallback` }, inicial);
+  const img = el('img', { class: classe, src: url, alt: nome || '', loading: 'lazy' });
+  img.addEventListener('error', () => img.replaceWith(el('div', { class: `${classe} ${classe}-fallback` }, inicial)));
+  return img;
+}
+
 /* Rodapé obrigatório da Jhovis em todas as telas */
 export function rodapeJhovis() {
   const div = el('div', { class: 'rodape-marca' });

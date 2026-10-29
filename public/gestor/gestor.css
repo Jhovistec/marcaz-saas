@@ -249,3 +249,9 @@
 }
 .pv-real { background: var(--ok); height: 100%; transition: width 0.5s ease-out; }
 .pv-agend { background: var(--prim); height: 100%; opacity: 0.75; transition: width 0.5s ease-out; }
+
+/* ============ logo da empresa no topo do painel ============ */
+img.marca-logo { object-fit: cover; background: var(--card); }
+.marca-logo-fallback {
+  background: linear-gradient(160deg, var(--prim-2), var(--prim)); color: #06080c;
+}

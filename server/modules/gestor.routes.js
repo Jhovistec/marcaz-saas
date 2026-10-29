@@ -469,6 +469,15 @@ router.put('/empresa', exigePermissao('horarios'), async (req, res) => {
   const temas = ['cyan', 'gold', 'purple', 'emerald', 'rose'];
   const tema = temas.includes(b.tema) ? b.tema : e.tema;
 
+  // logo: aceita URL http(s) ou data:image (upload redimensionado no navegador)
+  if (b.logo_url !== undefined && b.logo_url !== null && String(b.logo_url).trim()) {
+    const v = String(b.logo_url).trim();
+    if (!/^(https?:\/\/|data:image\/(png|jpeg|jpg|webp|gif);base64,)/i.test(v)) {
+      return res.status(400).json({ erro: 'Logo inválida: use uma URL de imagem ou envie o arquivo.' });
+    }
+    if (v.length > 500_000) return res.status(400).json({ erro: 'Imagem grande demais. Use uma menor (até ~350 KB).' });
+  }
+
   if (minutos(hora(b.aberto_hora, e.aberto_hora)) >= minutos(hora(b.fecha_hora, e.fecha_hora))) {
     return res.status(400).json({ erro: 'O horário de abertura deve ser antes do de fechamento.' });
   }
