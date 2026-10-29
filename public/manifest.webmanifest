@@ -2,16 +2,13 @@
   "name": "Marcaz — Agendamento online",
   "short_name": "Marcaz",
   "description": "Agende seu horário no estabelecimento.",
-  "start_url": "./",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0b0d12",
   "theme_color": "#0b0d12",
   "icons": [
-    {
-      "src": "/shared/icone.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "/shared/emblema-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/shared/emblema.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/shared/marcaz-app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
