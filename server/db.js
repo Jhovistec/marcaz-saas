@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   cargo         TEXT,
   permissoes    TEXT NOT NULL DEFAULT '',
   notif_ativa   INTEGER NOT NULL DEFAULT 1,
+  nascimento    TEXT,           -- AAAA-MM-DD; usamos só dia/mês (aniversário)
   ativo         INTEGER NOT NULL DEFAULT 1,
   criado_em     TEXT NOT NULL DEFAULT {NOW}
 );
@@ -171,6 +172,7 @@ const MIGRACOES = [
   ['empresas', 'almoco_fim', "TEXT DEFAULT '13:00'"],
   ['empresas', 'notif_gestor', 'INTEGER NOT NULL DEFAULT 1'],
   ['usuarios', 'notif_ativa', 'INTEGER NOT NULL DEFAULT 1'],
+  ['usuarios', 'nascimento', 'TEXT'],
   ['agendamentos', 'atraso_min', 'INTEGER NOT NULL DEFAULT 0'],
         ['agendamentos', 'grupo', 'TEXT'],
   ['agendamentos', 'concluido_em', 'TEXT'],

@@ -170,6 +170,9 @@ function telaLogin() {
     troca,
     el('div', { class: 'campo' }, el('label', {}, 'Seu telefone'), campoLogin, campoCPF),
     el('div', { class: 'campo' }, el('label', {}, 'Senha'), senha),
+    el('div', { class: 'campo' },
+      el('label', {}, 'Data de nascimento (opcional)'), nascimento,
+      el('div', { class: 'ajuda' }, 'Guardamos para te dar boas-vindas no seu dia.')),
     alerta,
     botao
   );
@@ -195,6 +198,7 @@ function telaCadastro() {
   const tel = el('input', { placeholder: '(99) 99999-9999', inputmode: 'numeric' });
   const cpf = el('input', { placeholder: '123.456.789-00', inputmode: 'numeric' });
   const senha = el('input', { type: 'password', placeholder: 'Crie uma senha (mín. 4)', autocomplete: 'new-password' });
+  const nascimento = el('input', { type: 'date', max: hojeISO() });
   tel.addEventListener('input', () => { tel.value = mascaraTelefone(tel.value); });
   cpf.addEventListener('input', () => { cpf.value = mascaraCPF(cpf.value); });
 
@@ -208,6 +212,7 @@ function telaCadastro() {
       try {
         const r = await post('/api/auth/cliente/cadastro', {
           empresa: slug, nome: nome.value, telefone: tel.value, cpf: cpf.value, senha: senha.value,
+          nascimento: nascimento.value || undefined,
         });
         estado.cliente = r.usuario;
         await carregarMeusAgendamentos();
@@ -223,6 +228,9 @@ function telaCadastro() {
     el('div', { class: 'campo' }, el('label', {}, 'WhatsApp'), tel),
     el('div', { class: 'campo' }, el('label', {}, 'CPF'), cpf),
     el('div', { class: 'campo' }, el('label', {}, 'Senha'), senha),
+    el('div', { class: 'campo' },
+      el('label', {}, 'Data de nascimento (opcional)'), nascimento,
+      el('div', { class: 'ajuda' }, 'Guardamos para te dar boas-vindas no seu dia.')),
     alerta,
     botao
   );

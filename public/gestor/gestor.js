@@ -1,6 +1,6 @@
 import {
   get, post, put, patch, del, $, el, brl, brlParaCentavos, mascaraTelefone, mascaraCPF, mascaraCNPJ, mascaraMoeda,
-  aviso, limpaAviso, hojeISO, dataLonga, proximosDias, rodapeJhovis,
+  aviso, limpaAviso, hojeISO, dataLonga, dataCurta, proximosDias, rodapeJhovis,
   abrirModal, fecharModal, ligaModalFechamento, isoParaData, diaCurto, sucesso,
 } from '/shared/app.js';
 
@@ -857,46 +857,131 @@ async function abaEquipe(alvo) {
 
 /* ============================ clientes ============================ */
 async function abaClientes(alvo) {
-  S.clientes = (await get('/api/gestor/clientes')).clientes;
+  const dados = await get('/api/gestor/clientes');
+  S.clientes = dados.clientes;
+  const porStatus = dados.porStatus;
+  const sumidos = dados.sumidos;
 
-  const linkWhats = (telefone, nome) => {
-    const numero = String(telefone || '').replace(/\D/g, '');
+  const linkWhats = (telefone, nome, motivo) => {
+    const numero = String(telefone || '')?.replace(/\D/g, '');
     if (!numero) return null;
     const comPais = numero.startsWith('55') ? numero : `55${numero}`;
-    const texto = encodeURIComponent(`Olá, ${String(nome || '').split(' ')[0]}! Aqui é do ${S.contexto.empresa.nome}.`);
+    const texto = encodeURIComponent(`Olá, ${String(nome || '').split(' ')[0]}! Aqui é do ${S.contexto.empresa.nome}. ${motivo}`);
     return `https://api.whatsapp.com/send/?phone=${comPais}&text=${texto}&type=phone_number&app_absent=0`;
   };
 
-  alvo.append(
-    el('div', { class: 'card' },
-      el('div', { class: 'card-titulo' }, 'Clientes cadastrados', el('span', { class: 'tag' }, `${S.clientes.length}`)),
-      S.clientes.length
-        ? el('div', { class: 'tabela-wrap' }, el('table', { class: 'tabela' },
-          el('thead', {}, el('tr', {}, el('th', {}, 'Nome'), el('th', {}, 'WhatsApp'), el('th', {}, 'Agendamentos'), el('th', {}, 'Última visita'))),
-          el('tbody', {}, S.clientes.map((c) => {
-            const url = linkWhats(c.telefone, c.nome);
-            return el('tr', {},
-              el('td', { style: 'font-weight:750' }, c.nome),
-              el('td', {},
-                el('div', { class: 'flex', style: 'gap:8px' },
-                  el('span', {}, mascaraTelefone(c.telefone || '') || '—'),
-                  url
-                    ? el('a', {
-                      class: 'btn-whats', href: url, target: '_blank', rel: 'noopener',
-                      title: `Falar com ${c.nome} no WhatsApp`, 'aria-label': `Falar com ${c.nome} no WhatsApp`,
-                    }, 'WhatsApp')
-                    : null
-                )
-              ),
-              el('td', {}, String(c.agendamentos)),
-              el('td', { class: 'muted' }, c.ultima ? dataLonga(c.ultima) : '—')
+  const rotuloStatus = {
+    ativo: ['Ativo', 'tag on'],
+    visto: ['Visto há pouco', 'tag'],
+    sumido30: ['Sumiu de 30-60 dias', 'tag off'],
+    sumido60: ['Sumiu de 60-90 dias', 'tag off'],
+    sumido90: ['Sumiu há +90 dias', 'tag off'],
+    nunca: ['Nunca veio', 'tag'],
+  };
+
+  const kpi = (valor, rot, extra) =>
+    el('div', { class: 'kpi', style: extra || '' },
+      el('div', { class: 'kpi-valor', style: 'font-size:1.1rem;padding-top:4px' }, valor),
+      el('div', { class: 'kpi-rotulo' }, rot));
+
+  // filtro: todos | sumidos
+  const filtro = el('select', {},
+    el('option', { value: 'todos' }, 'Todos os clientes'),
+    el('option', { value: 'sumidos' }, 'Só os sumidos')
+  );
+  let listaMostrada = S.clientes;
+
+  const montarLista = () => {
+    listaMostrada = filtro.value === 'sumidos' ? sumidos : S.clientes;
+    const tabela = el('div', { class: 'tabela-wrap' }, el('table', { class: 'tabela' },
+      el('thead', {}, el('tr', {}, el('th', {}, 'Cliente'), el('th', {}, 'WhatsApp'), el('th', {}, 'Status'), el('th', {}, 'Última visita'))),
+      el('tbody', {}, listaMostrada.map((c) => {
+        const [rot, classe] = rotuloStatus[c.status] || ['', ''];
+        const url = linkWhats(c.telefone, c.nome, c.status.startsWith('sumido')
+          ? `Senti sua falta! Que tal agendar?` : `Que tal marcar seu próximo horário?`);
+        return el('tr', {},
+          el('td', { style: 'font-weight:750' },
+            c.nome,
+            c.status.startsWith('sumido') && c.gasto_total_cent > 0
+              ? el('div', { class: 'mini muted' }, `💸 já gastou ${brl(c.gasto_total_cent)}`)
+              : null),
+          el('td', {},
+            el('div', { class: 'flex', style: 'gap:6px' },
+              el('span', {}, mascaraTelefone(c.telefone || '') || '—'),
+              url ? el('a', { class: 'btn-whats', href: url, target: '_blank', rel: 'noopener', title: 'Falar no WhatsApp' }, 'WhatsApp') : null
+            )
+          ),
+          el('td', {}, el('span', { class: classe }, rot)),
+          el('td', { class: 'muted' }, c.ultima ? `${dataLonga(c.ultima)} (há ${c.dias_desde} dias)` : '—')
+        );
+      }))
+    ));
+    tabela.id = 'tabelaClientes';
+    const antes = document.getElementById('tabelaClientes');
+    if (antes && antes !== tabela) antes.replaceWith(tabela);
+    return tabela;
+  };
+
+  filtro.onchange = montarLista;
+
+  // ---- aniversariantes do mês ----
+  const hojeMes = hojeISO().slice(0, 7);
+  const selMes = el('select', { style: 'max-width:170px' });
+  const montarMeses = () => {
+    const opcoes = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(Number(hojeMes.slice(0, 4)), Number(hojeMes.slice(5, 7)) - 1 + i, 1);
+      const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      opcoes.push(el('option', { value: v, selected: v === hojeMes ? '' : null },
+        `${NOMES_MESES[d.getMonth()]} ${d.getFullYear()}`));
+    }
+    selMes.replaceChildren(...opcoes);
+  };
+  const caixaAniversarios = el('div', { id: 'caixaAniversarios' });
+
+  async function carregarAniversarios() {
+    const r = await get(`/api/gestor/aniversarios?mes=${selMes.value}`);
+    const lista = r.aniversarios;
+    caixaAniversarios.replaceChildren(
+      el('div', { class: 'card' },
+        el('div', { class: 'card-titulo' }, '🎂 Aniversariantes do mês',
+          el('div', { class: 'flex' }, selMes)),
+        lista.length
+          ? el('div', {}, lista.map((c) => {
+            const url = linkWhats(c.telefone, c.nome,
+              `Sabia que hoje é seu aniversário! Temos um horário especial para você. 🎉`);
+            return el('div', { class: 'item' },
+              el('div', { style: 'min-width:0' },
+                el('div', { class: 'item-titulo' }, `${c.dia}/${Number(c.nascimento.slice(5, 7))} — ${c.nome}`),
+                el('div', { class: 'mini muted' },
+                  `faz ${c.idade} anos · ${c.agendamentos} visita(s) · ${mascaraTelefone(c.telefone || '')}`))
+              ,
+              url ? el('a', { class: 'btn-whats', href: url, target: '_blank', rel: 'noopener' }, 'Parabenizar') : null
             );
           }))
-        ))
-        : el('div', { class: 'bloco-vazio' }, el('span', { class: 'icone' }, '🙋'), 'Nenhum cliente cadastrado ainda.')
-    )
+          : el('div', { class: 'bloco-vazio' },
+            el('span', { class: 'icone' }, '🎂'),
+            'Nenhum cliente informou data de nascimento ainda. Ela é opcional na hora do cadastro — quanto mais clientes completarem, mais campanhas de aniversário você faz.')
+      )
+    );
+  }
+  selMes.onchange = carregarAniversarios;
+  montarMeses();
+
+  alvo.append(
+    el('div', { class: 'grade-2', style: 'margin-bottom:14px' },
+      kpi(String(porStatus.ativo), 'Clientes ativos'),
+      kpi(String(sumidos.length), 'Clientes sumidos', 'color:var(--aviso)'),
+      kpi(brl(dados.receita_em_risco_cent), 'Receita em risco')
+    ),
+    montarLista(),
+    caixaAniversarios
   );
+  carregarAniversarios();
 }
+
+const NOMES_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
 /* ============================ configurações ============================ */
 async function abaHorarios(alvo) {
@@ -1150,7 +1235,7 @@ function opcoesBase(mostrarEixoY = true) {
           beginAtZero: true,
           grid: { color: grade, drawTicks: false },
           border: { display: false },
-          ticks: { color: texto, font: { size: 10 }, maxTicksLimit: 5, callback: (v) => (v >= 1000 ? `R$${v / 1000}k` : `R$${v}`) },
+          ticks: { color: texto, font: { size: 10 }, maxTicksLimit: 5, callback: (v) => (v >= 1000 ? `R$ ${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil` : `R$ ${v}`) },
         },
       }
       : { x: { display: false }, y: { display: false } },
@@ -1214,8 +1299,38 @@ function renderFinanceiro(alvo, r, de, ate, controles) {
     )
     : null;
 
+  // ---- previsão de faturamento do mês ----
+  const pv = r.previsao;
+  const alvoMes = pv.mes_anterior_cent > 0 ? pv.mes_anterior_cent : (pv.realizado_cent + pv.agendado_cent);
+  const pctReal = alvoMes ? Math.min(100, Math.round((pv.realizado_cent / alvoMes) * 100)) : 0;
+  const pctAgend = alvoMes ? Math.min(100 - pctReal, Math.round((pv.agendado_cent / alvoMes) * 100)) : 0;
+  const delta = pv.mes_anterior_cent > 0
+    ? Math.round(((pv.previsto_cent - pv.mes_anterior_cent) / pv.mes_anterior_cent) * 100)
+    : null;
+
+  const cartaoPrevisao = el('div', { class: 'card card-previsao' },
+    el('div', { class: 'card-titulo' }, '📈 Previsão do mês',
+      el('span', { class: 'mini muted' }, `de ${dataCurta(pv.primeiro_dia)} a ${dataCurta(pv.ultimo_dia)}`)),
+    el('div', { class: 'entre', style: 'flex-wrap:wrap;gap:12px' },
+      el('div', {},
+        el('div', { class: 'previsao-valor' }, brl(pv.previsto_cent)),
+        el('div', { class: 'kpi-rotulo' }, 'previsto para o mês')),
+      el('div', { class: 'previsao-itens' },
+        el('div', { class: 'mini' }, el('span', { class: 'ponto-cor', style: 'background:var(--ok)' }), `Realizado ${brl(pv.realizado_cent)}`),
+        el('div', { class: 'mini' }, el('span', { class: 'ponto-cor', style: 'background:var(--prim)' }), `Agendado ${brl(pv.agendado_cent)} (${pv.futuros_qtd} horário(s))`),
+        pv.mes_anterior_cent > 0
+          ? el('div', { class: 'mini muted' }, `Mês passado: ${brl(pv.mes_anterior_cent)} · ${delta >= 0 ? '+' : ''}${delta}% projetado`)
+          : null)
+    ),
+    el('div', { class: 'previsao-barra' },
+      el('div', { class: 'previsao-trilho' },
+        el('div', { class: 'pv-real', style: `width:${pctReal}%` }),
+        el('div', { class: 'pv-agend', style: `width:${pctAgend}%` })))
+  );
+
   alvo.append(
     filtro || el('div'),
+    cartaoPrevisao,
     el('div', { class: 'grade-3', style: 'margin-bottom:14px' },
       kpi(brl(r.hoje.bruto), 'Faturamento hoje'),
       kpi(brl(r.semana.bruto), 'Faturamento semanal'),
