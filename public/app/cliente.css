@@ -282,3 +282,21 @@
 .bloco-x:hover { color: var(--acento); }
 .servico .marca.marcada { background: var(--prim); border-color: var(--prim); font-size: 0.68rem; font-weight: 900; }
 .final-cartao-linha.total span:last-child { font-size: 1rem; }
+
+/* logo da empresa no topo da área logada */
+.logo-topo {
+  width: 42px; height: 42px; border-radius: 50%; object-fit: cover;
+  background: var(--card); border: 1px solid var(--linha);
+}
+.logo-topo-fallback {
+  width: 42px; height: 42px; border-radius: 50%; flex: 0 0 auto;
+  background: linear-gradient(160deg, var(--prim-2), var(--prim)); color: #06080c;
+  display: flex; align-items: center; justify-content: center; font-weight: 900;
+}
+
+.final-logo-fallback {
+  width: 96px; height: 96px; border-radius: 50%; margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, var(--prim-2), var(--prim)); color: #06080c;
+  font-size: 2.4rem; font-weight: 900; border: 2px solid var(--prim);
+}

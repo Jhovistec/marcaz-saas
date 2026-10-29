@@ -32,11 +32,10 @@ const POR_PAGINA = 8;
 
 /** Imagem com fallback: se a URL quebrar, mostra a inicial do nome. */
 function imagemOuInicial(url, nome, classe) {
-  if (!url) return el('div', { class: 'empresa-logo-fallback' }, nome.charAt(0).toUpperCase());
-  const img = el('img', { class: classe, src: url, alt: nome, loading: 'lazy' });
-  img.addEventListener('error', () => {
-    img.replaceWith(el('div', { class: 'empresa-logo-fallback' }, nome.charAt(0).toUpperCase()));
-  });
+  const inicial = () => el('div', { class: `${classe}-fallback` }, (nome || '?').trim().charAt(0).toUpperCase());
+  if (!url) return inicial();
+  const img = el('img', { class: `${classe} ${classe}-img`, src: url, alt: nome, loading: 'lazy' });
+  img.addEventListener('error', () => img.replaceWith(inicial()));
   return img;
 }
 
@@ -170,9 +169,6 @@ function telaLogin() {
     troca,
     el('div', { class: 'campo' }, el('label', {}, 'Seu telefone'), campoLogin, campoCPF),
     el('div', { class: 'campo' }, el('label', {}, 'Senha'), senha),
-    el('div', { class: 'campo' },
-      el('label', {}, 'Data de nascimento (opcional)'), nascimento,
-      el('div', { class: 'ajuda' }, 'Guardamos para te dar boas-vindas no seu dia.')),
     alerta,
     botao
   );
@@ -642,9 +638,9 @@ function telaAgendamento() {
 
   const topo = el('div', { class: 'topo-sessao entra' },
     el('div', { class: 'flex' },
-      el('div', { class: 'avatar' }, (estado.cliente?.nome || '?').charAt(0).toUpperCase()),
+      imagemOuInicial(e.logo_url, e.nome, 'logo-topo'),
       el('div', {},
-        el('div', { style: 'font-weight:750;font-size:0.9rem' }, estado.cliente?.nome || ''),
+        el('div', { style: 'font-weight:750;font-size:0.9rem' }, `Olá, ${((estado.cliente?.nome || '').split(' ')[0]) || ''}`.trim()),
         el('div', { class: 'mini muted' }, e.nome)
       )
     ),

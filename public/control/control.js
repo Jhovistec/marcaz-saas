@@ -265,7 +265,12 @@ async function modalEditarEmpresa(id) {
   tel.input.addEventListener('input', () => { tel.input.value = mascaraTelefone(tel.input.value); });
   const endereco = campo('Endereço', emp.endereco);
   const slug = campo('Link (slug)', emp.slug);
-  const logo = campo('URL da logomarca', emp.logo_url);
+  const temLogoArquivo = (emp.logo_url || '').startsWith('data:');
+  const logo = campo('URL da logomarca', temLogoArquivo ? '' : emp.logo_url);
+  if (temLogoArquivo) {
+    logo.bloco.append(el('div', { class: 'ajuda' },
+      'Este estabelecimento já enviou a própria logomarca pelo painel dele — apague este campo só para trocar por uma URL.'));
+  }
   const instagram = campo('Instagram', emp.instagram);
   const whatsapp = campo('WhatsApp (só números, com 55)', emp.whatsapp);
   const facebook = campo('Facebook', emp.facebook);
