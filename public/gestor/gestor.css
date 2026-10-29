@@ -255,3 +255,35 @@ img.marca-logo { object-fit: cover; background: var(--card); }
 .marca-logo-fallback {
   background: linear-gradient(160deg, var(--prim-2), var(--prim)); color: #06080c;
 }
+
+/* ============ guias do login (Pessoal | Empresa) ============ */
+.abas-login { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 16px; }
+.grupo {
+  display: flex; align-items: center; gap: 6px; position: relative;
+  border: 1px solid var(--linha); border-radius: 12px; padding: 6px; background: var(--bg);
+  transition: border-color 0.15s, background 0.15s;
+}
+.grupo-ativo { border-color: var(--prim); background: color-mix(in srgb, var(--prim) 7%, var(--bg)); }
+.grupo-nome {
+  position: absolute; top: -8px; left: 10px; padding: 0 6px; background: var(--bg);
+  font-size: 0.58rem; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--txt-3);
+}
+.grupo-ativo .grupo-nome { color: var(--prim); background: linear-gradient(180deg, var(--bg), var(--bg)); }
+.grupo .aba { flex: 1; border: 1px solid transparent; background: transparent; padding: 9px 6px; font-size: 0.78rem; }
+.grupo .aba:hover { background: var(--card); color: var(--txt); }
+.grupo .aba.ativa {
+  background: color-mix(in srgb, var(--prim) 16%, transparent);
+  border-color: color-mix(in srgb, var(--prim) 60%, transparent);
+  color: var(--prim);
+}
+@media (max-width: 520px) {
+  .abas-login { grid-template-columns: 1fr; }
+}
+
+/* ============ logo do app na tela de login ============ */
+.logo-app-login {
+  display: block; margin: 0 auto 14px; width: 72px; height: 72px;
+  border-radius: 50%; background: #fff; object-fit: cover;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--prim) 22%, transparent);
+}

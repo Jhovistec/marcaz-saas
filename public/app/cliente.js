@@ -3,6 +3,9 @@ import {
   proximosDias, dataLonga, rodapeJhovis, hojeISO,
   abrirModal, fecharModal, ligaModalFechamento, isoParaData,
 } from '/shared/app.js';
+import { registrarSW, botaoInstalar } from '/shared/pwa.js';
+
+registrarSW();
 
 const slug = location.pathname.replace(/^\/+|\/+$/g, '').split('/')[0];
 const app = $('#app');
@@ -179,6 +182,9 @@ function telaLogin() {
       el('div', { class: 'login-titulo' }, 'Acesse sua conta'),
       el('div', { class: 'login-sub' }, 'Entre com WhatsApp ou CPF para agendar em segundos.'),
       formulario
+    ),
+    el('div', { class: 'rodape-login', style: 'text-align:center;margin-top:10px' },
+      botaoInstalar('📲 Instalar como aplicativo')
     ),
     el('div', { class: 'rodape-login' },
       el('span', { class: 'pequeno muted' }, 'Ainda não tem cadastro? '),

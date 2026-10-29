@@ -4,9 +4,11 @@ import {
   abrirModal, fecharModal, ligaModalFechamento, isoParaData, diaCurto, sucesso,
   imagemComFallback,
 } from '/shared/app.js';
+import { registrarSW, botaoInstalar } from '/shared/pwa.js';
 
 const app = $('#app');
 $('#rodape').append(rodapeJhovis());
+registrarSW();
 
 const S = {
   contexto: null,
@@ -306,41 +308,60 @@ function telaLogin() {
   const alerta = el('div', { class: 'alerta' });
 
   const MODOS = {
-    telefone: { label: 'Telefone (funcionário)', placeholder: '(99) 99999-9999', mascara: mascaraTelefone,
+    telefone: { grupo: 'pessoal', rotulo: 'Telefone', rotuloCampo: 'Telefone (funcionário)',
+      placeholder: '(99) 99999-9999', mascara: mascaraTelefone,
       dica: 'O celular cadastrado pelo proprietário.' },
-    cpf: { label: 'CPF (proprietário)', placeholder: '123.456.789-00', mascara: mascaraCPF,
+    cpf: { grupo: 'pessoal', rotulo: 'CPF', rotuloCampo: 'CPF (proprietário)',
+      placeholder: '123.456.789-00', mascara: mascaraCPF,
       dica: 'Somente os números do seu CPF.' },
-    cnpj: { label: 'CNPJ (empresa)', placeholder: '00.000.000/0000-00', mascara: mascaraCNPJ,
+    cnpj: { grupo: 'empresa', rotulo: 'CNPJ', rotuloCampo: 'CNPJ (empresa)',
+      placeholder: '00.000.000/0000-00', mascara: mascaraCNPJ,
       dica: 'O CNPJ do seu estabelecimento.' },
-    email: { label: 'E-mail', placeholder: 'voce@empresa.com.br', mascara: null,
+    email: { grupo: 'empresa', rotulo: 'E-mail', rotuloCampo: 'E-mail',
+      placeholder: 'voce@empresa.com.br', mascara: null,
       dica: 'O e-mail cadastrado no acesso.' },
   };
   let modo = 'telefone';
 
   const campo = el('input', {
     placeholder: MODOS.telefone.placeholder, autocomplete: 'username',
-    inputmode: 'numeric', spellcheck: 'false', 'aria-label': MODOS.telefone.label,
+    inputmode: 'numeric', spellcheck: 'false', 'aria-label': MODOS.telefone.rotuloCampo,
   });
-  const rotulo = el('label', {}, MODOS.telefone.label);
+  const rotulo = el('label', {}, MODOS.telefone.rotuloCampo);
   const dica = el('div', { class: 'ajuda' }, MODOS.telefone.dica);
 
-  const abas = Object.entries(MODOS).map(([chave, cfg]) => {
-    const b = el('button', { class: `aba${chave === modo ? ' ativa' : ''}`, type: 'button' },
-      cfg.label.split(' (')[0]);
-    b.onclick = () => {
-      modo = chave;
-      for (const x of abas) x.classList.toggle('ativa', x === b);
-      campo.value = '';
-      campo.placeholder = cfg.placeholder;
-      campo.setAttribute('aria-label', cfg.label);
-      campo.inputMode = chave === 'email' ? 'email' : 'numeric';
-      rotulo.textContent = cfg.label;
-      dica.textContent = cfg.dica;
-      limpaAviso(alerta);
-      campo.focus();
-    };
-    return b;
-  });
+  const aplicarModo = (chave, botao) => {
+    modo = chave;
+    const cfg = MODOS[chave];
+    document.querySelectorAll('#abasLogin .aba').forEach((x) => {
+      const ativo = x.dataset.modo === chave;
+      x.classList.toggle('ativa', ativo);
+      x.setAttribute('aria-selected', ativo ? 'true' : 'false');
+    });
+    document.querySelectorAll('#abasLogin .grupo').forEach((g) => {
+      g.classList.toggle('grupo-ativo', g.dataset.grupo === cfg.grupo);
+    });
+    campo.value = '';
+    campo.placeholder = cfg.placeholder;
+    campo.setAttribute('aria-label', cfg.rotuloCampo);
+    campo.inputMode = chave === 'email' ? 'email' : 'numeric';
+    rotulo.textContent = cfg.rotuloCampo;
+    dica.textContent = cfg.dica;
+    limpaAviso(alerta);
+    campo.focus();
+  };
+
+  const grupoPessoal = el('div', { class: 'grupo grupo-ativo', 'data-grupo': 'pessoal', role: 'tablist', 'aria-label': 'Acesso pessoal' },
+    el('span', { class: 'grupo-nome' }, 'Pessoal'),
+    el('button', { class: 'aba ativa', type: 'button', role: 'tab', 'aria-selected': 'true', 'data-modo': 'telefone', onclick: (ev) => aplicarModo('telefone', ev.currentTarget) }, 'Telefone'),
+    el('button', { class: 'aba', type: 'button', role: 'tab', 'aria-selected': 'false', 'data-modo': 'cpf', onclick: (ev) => aplicarModo('cpf', ev.currentTarget) }, 'CPF')
+  );
+  const grupoEmpresa = el('div', { class: 'grupo', 'data-grupo': 'empresa', role: 'tablist', 'aria-label': 'Acesso da empresa' },
+    el('span', { class: 'grupo-nome' }, 'Empresa'),
+    el('button', { class: 'aba', type: 'button', role: 'tab', 'aria-selected': 'false', 'data-modo': 'cnpj', onclick: (ev) => aplicarModo('cnpj', ev.currentTarget) }, 'CNPJ'),
+    el('button', { class: 'aba', type: 'button', role: 'tab', 'aria-selected': 'false', 'data-modo': 'email', onclick: (ev) => aplicarModo('email', ev.currentTarget) }, 'E-mail')
+  );
+  const abas = el('div', { class: 'abas-login', id: 'abasLogin' }, grupoPessoal, grupoEmpresa);
 
   campo.addEventListener('input', () => {
     const cfg = MODOS[modo];
@@ -374,7 +395,7 @@ function telaLogin() {
       }
     },
   },
-    el('div', { class: 'campo' }, rotulo, el('div', { class: 'abas', style: 'margin-bottom:9px' }, abas), campo, dica),
+    el('div', { class: 'campo' }, abas, rotulo, campo, dica),
     el('div', { class: 'campo' }, el('label', {}, 'Senha'), senha),
     alerta,
     botao
@@ -386,7 +407,7 @@ function telaLogin() {
       el('div', { class: 'login-caixa entra' },
         el('div', { class: 'card' },
           el('div', { style: 'text-align:center;margin-bottom:22px' },
-            el('div', { class: 'marca-logo', style: 'margin:0 auto 12px;width:52px;height:52px;font-size:1.3rem' }, 'M'),
+            el('img', { class: 'logo-app-login', src: '/shared/emblema.png', alt: 'Marcaz', width: 68, height: 68 }),
             el('div', { style: 'font-weight:800;font-size:1.05rem' }, 'Marcaz — Painel do Gestor'),
             el('div', { class: 'pequeno muted', style: 'margin-top:4px' }, 'Entre com o acesso do seu estabelecimento')
           ),
@@ -394,7 +415,8 @@ function telaLogin() {
         ),
         el('div', { style: 'text-align:center;margin-top:14px' },
           el('a', { class: 'pequeno muted', href: '/control' }, 'Sou da equipe Jhovis → Marcaz Control')
-        )
+        ),
+        el('div', { style: 'text-align:center;margin-top:10px' }, botaoInstalar('📲 Instalar o app Marcaz'))
       )
     )
   );
@@ -430,6 +452,7 @@ function telaPainel() {
           )
         ),
         el('div', { class: 'btn-linha' },
+          botaoInstalar('Instalar'),
           sinoNotificacoes(),
           el('a', { class: 'btn btn-fantasma btn-mini', href: `/${c.empresa.slug}`, target: '_blank', rel: 'noopener' }, 'Página do cliente'),
           el('button', {
