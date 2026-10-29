@@ -236,3 +236,16 @@
   .link-linha { flex-direction: column; }
   .link-linha .btn { width: 100%; height: 44px; }
 }
+
+/* ============ previsão de faturamento ============ */
+.card-previsao { margin-bottom: 14px; }
+.previsao-valor { font-size: 1.6rem; font-weight: 800; color: var(--prim); letter-spacing: -0.02em; }
+.previsao-itens { display: flex; flex-direction: column; gap: 5px; }
+.ponto-cor { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.previsao-barra { margin-top: 14px; }
+.previsao-trilho {
+  display: flex; height: 12px; border-radius: 999px; overflow: hidden;
+  background: var(--bg); border: 1px solid var(--linha-suave);
+}
+.pv-real { background: var(--ok); height: 100%; transition: width 0.5s ease-out; }
+.pv-agend { background: var(--prim); height: 100%; opacity: 0.75; transition: width 0.5s ease-out; }

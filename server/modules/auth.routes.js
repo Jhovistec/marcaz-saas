@@ -49,7 +49,7 @@ router.post('/cliente/login', async (req, res) => {
 
 // Cadastro do cliente
 router.post('/cliente/cadastro', async (req, res) => {
-  const { empresa, nome, telefone, cpf, senha } = req.body || {};
+  const { empresa, nome, telefone, cpf, senha, nascimento } = req.body || {};
   const emp = await db.prepare('SELECT * FROM empresas WHERE slug = ?').get(empresa);
   if (!emp) return res.status(404).json({ erro: 'Estabelecimento não encontrado.' });
   if (emp.status !== 'ativa') return res.status(403).json({ erro: 'Estabelecimento temporariamente indisponível.' });
@@ -66,12 +66,19 @@ router.post('/cliente/cadastro', async (req, res) => {
     .get(emp.id, tel, cpfN);
   if (existe) return res.status(409).json({ erro: 'Já existe um cadastro com este telefone ou CPF. Faça login.' });
 
+  // aniversário é opcional; quando vem, guardamos a data completa
+  let nasc = null;
+  if (nascimento && /^\d{4}-\d{2}-\d{2}$/.test(String(nascimento))) {
+    const d = new Date(String(nascimento) + 'T12:00:00');
+    if (!Number.isNaN(d.getTime()) && d <= new Date()) nasc = String(nascimento);
+  }
+
   const info = await db
     .prepare(
-      `INSERT INTO usuarios (empresa_id, nome, telefone, cpf, senha_hash, papel)
-       VALUES (?,?,?,?,?, 'cliente')`
+      `INSERT INTO usuarios (empresa_id, nome, telefone, cpf, senha_hash, papel, nascimento)
+       VALUES (?,?,?,?,?, 'cliente', ?)`
     )
-    .run(emp.id, String(nome).trim(), tel, cpfN, hashSenha(senha));
+    .run(emp.id, String(nome).trim(), tel, cpfN, hashSenha(senha), nasc);
   const u = await db.prepare('SELECT * FROM usuarios WHERE id = ?').get(info.lastInsertRowid);
   setCookie(res, await criaToken(u.id));
   res.status(201).json({ usuario: publico(u) });

@@ -508,13 +508,95 @@ router.get('/clientes', exigePermissao('agenda'), async (req, res) => {
   if (!e) return;
   const clientes = await db
     .prepare(
-      `SELECT u.id, u.nome, u.telefone, COUNT(a.id) AS agendamentos, MAX(a.data) AS ultima
+      `SELECT u.id, u.nome, u.telefone, u.nascimento, COUNT(a.id) AS agendamentos, MAX(a.data) AS ultima,
+              COUNT(CASE WHEN a.status = 'concluido' THEN 1 END) AS visitas,
+              SUM(CASE WHEN a.status = 'concluido' THEN a.preco_cent ELSE 0 END) AS gasto_total_cent
        FROM usuarios u LEFT JOIN agendamentos a ON a.cliente_id = u.id AND a.status <> 'cancelado'
        WHERE u.empresa_id = ? AND u.papel = 'cliente'
        GROUP BY u.id ORDER BY u.nome`
     )
     .all(e.id);
-  res.json({ clientes });
+
+  const hoje = hojeISO();
+  const diasDesde = (iso) => {
+    if (!iso) return null;
+    const ini = new Date(iso + 'T12:00:00');
+    const fim = new Date(hoje + 'T12:00:00');
+    return Math.floor((fim - ini) / 864e5);
+  };
+
+  const comStatus = clientes.map((c) => {
+    const dias = diasDesde(c.ultima);
+    let status = 'nunca';
+    if (dias !== null && dias <= 15) status = 'ativo';
+    else if (dias !== null && dias <= 30) status = 'visto';
+    else if (dias !== null && dias <= 60) status = 'sumido30';    // sumiu há 30-60
+    else if (dias !== null && dias <= 90) status = 'sumido60';    // sumiu há 60-90
+    else if (dias !== null) status = 'sumido90';                  // sumiu há +90
+    return { ...c, dias_desde: dias, status };
+  });
+
+  const porStatus = {
+    ativo: comStatus.filter((c) => c.status === 'ativo').length,
+    visto: comStatus.filter((c) => c.status === 'visto').length,
+    sumido30: comStatus.filter((c) => c.status === 'sumido30').length,
+    sumido60: comStatus.filter((c) => c.status === 'sumido60').length,
+    sumido90: comStatus.filter((c) => c.status === 'sumido90').length,
+    nunca: comStatus.filter((c) => c.status === 'nunca').length,
+  };
+  const sumidos = comStatus.filter((c) => c.status.startsWith('sumido'));
+  const receitaEmRisco = sumidos.reduce((t, c) => t + (c.gasto_total_cent || 0), 0);
+
+  res.json({
+    clientes: comStatus,
+    porStatus,
+    sumidos,
+    receita_em_risco_cent: receitaEmRisco,
+  });
+});
+
+// Atualiza dados de relacionamento do cliente (aniversário, observação)
+router.put('/clientes/:id', exigePermissao('agenda'), async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const c = await db
+    .prepare(`SELECT * FROM usuarios WHERE id = ? AND empresa_id = ? AND papel = 'cliente'`)
+    .get(req.params.id, e.id);
+  if (!c) return res.status(404).json({ erro: 'Cliente não encontrado.' });
+  let nasc = c.nascimento;
+  if (req.body?.nascimento !== undefined) {
+    const v = String(req.body.nascimento || '').trim();
+    if (!v) nasc = null;
+    else if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return res.status(400).json({ erro: 'Data de nascimento inválida.' });
+    else nasc = v;
+  }
+  await db.prepare('UPDATE usuarios SET nascimento = ? WHERE id = ?').run(nasc, c.id);
+  res.json({ ok: true, nascimento: nasc });
+});
+
+// Aniversariantes de um mês (por padrão, o mês corrente)
+router.get('/aniversarios', exigePermissao('agenda'), async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const hoje = hojeISO();
+  const mes = /^\d{4}-\d{2}$/.test(req.query.mes || '') ? req.query.mes : hoje.slice(0, 7);
+  const mm = mes.slice(5, 7);
+  const lista = await db
+    .prepare(
+      `SELECT u.id, u.nome, u.telefone, u.nascimento,
+              (SELECT MAX(a.data) FROM agendamentos a WHERE a.cliente_id = u.id AND a.status <> 'cancelado') AS ultima,
+              (SELECT COUNT(*) FROM agendamentos a WHERE a.cliente_id = u.id AND a.status <> 'cancelado') AS agendamentos
+       FROM usuarios u
+       WHERE u.empresa_id = ? AND u.papel = 'cliente' AND u.nascimento IS NOT NULL AND substr(u.nascimento, 6, 2) = ?
+       ORDER BY CAST(substr(u.nascimento, 9, 2) AS INTEGER)`
+    )
+    .all(e.id, mm);
+  const itens = lista.map((c) => ({
+    ...c,
+    dia: Number(c.nascimento.slice(8, 10)),
+    idade: Number(hoje.slice(0, 4)) - Number(c.nascimento.slice(0, 4)),
+  }));
+  res.json({ mes, aniversarios: itens });
 });
 
 // ---- notificações -----------------------------------------------------------
@@ -620,9 +702,48 @@ router.get('/financeiro', exigePermissao('financeiro'), async (req, res) => {
     .map(([hora, qtd]) => ({ hora, qtd }))
     .sort((x, y) => x.hora.localeCompare(y.hora));
 
+  // previsão do mês: o que já entrou + o que está agendado até o fim do mês
+  const primeiroDiaMes = `${hoje.slice(0, 7)}-01`;
+  const ultimoDiaMes = (() => {
+    const d = new Date(Number(hoje.slice(0, 4)), Number(hoje.slice(5, 7)), 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+  const realizadoMes = await db
+    .prepare(
+      `SELECT COUNT(*) AS qtd, COALESCE(SUM(preco_cent),0) AS bruto FROM agendamentos
+       WHERE empresa_id = ? AND data BETWEEN ? AND ? AND status <> 'cancelado' AND data <= ?`
+    )
+    .get(e.id, primeiroDiaMes, hoje, hoje);
+  const futurosMes = await db
+    .prepare(
+      `SELECT COUNT(*) AS qtd, COALESCE(SUM(preco_cent),0) AS bruto FROM agendamentos
+       WHERE empresa_id = ? AND data > ? AND data <= ? AND status = 'agendado'`
+    )
+    .get(e.id, hoje, ultimoDiaMes);
+  const [anMes, mesNum] = hoje.slice(0, 7).split('-').map(Number);
+  const dIniAnt = new Date(anMes, mesNum - 2, 1);
+  const dFimAnt = new Date(anMes, mesNum - 1, 0);
+  const f = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const mesAnterior = await db
+    .prepare(
+      `SELECT COALESCE(SUM(preco_cent),0) AS bruto FROM agendamentos
+       WHERE empresa_id = ? AND status <> 'cancelado' AND data BETWEEN ? AND ?`
+    )
+    .get(e.id, f(dIniAnt), f(dFimAnt));
+
   res.json({
     de,
     ate,
+    previsao: {
+      mes: hoje.slice(0, 7),
+      primeiro_dia: primeiroDiaMes,
+      ultimo_dia: ultimoDiaMes,
+      realizado_cent: realizadoMes.bruto,
+      agendado_cent: futurosMes.bruto,
+      previsto_cent: realizadoMes.bruto + futurosMes.bruto,
+      futuros_qtd: futurosMes.qtd,
+      mes_anterior_cent: mesAnterior.bruto,
+    },
     hoje: {
       bruto: soma(doDia, 'preco_cent'),
       qtd: doDia.length,
