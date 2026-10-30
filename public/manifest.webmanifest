@@ -4,6 +4,7 @@
   "description": "Agende seu horário no estabelecimento.",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0b0d12",
   "theme_color": "#0b0d12",
   "icons": [
