@@ -277,3 +277,16 @@ select {
 }
 .ajuda-endereco span { word-break: break-all; text-align: left; }
 .botao-instalar { text-transform: none; }
+
+/* ============ campo de senha com botão "olho" ============ */
+.senha-com-olho { position: relative; display: block; }
+.senha-com-olho input.senha-entrada { padding-right: 44px; width: 100%; }
+.olho-senha {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border-radius: 9px; border: none; cursor: pointer;
+  background: transparent; font-size: 1.05rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, opacity 0.15s;
+}
+.olho-senha:hover { background: color-mix(in srgb, var(--prim) 16%, transparent); }
+.olho-senha:focus-visible { outline: 2px solid var(--prim); outline-offset: 1px; }
