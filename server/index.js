@@ -28,6 +28,7 @@ function localPublico() {
   return candidatos[0];
 }
 const PUBLICO = localPublico();
+const BOOT = `${Date.now().toString(36)}-${process.pid}`;
 const PORT = process.env.PORT || 3000;
 
 const app = express();
@@ -64,6 +65,14 @@ app.get('/__env', (_req, res) => {
     erro_banco: erroBanco,
     aviso_ipv4: urlIncompativelComIPv4(process.env.DATABASE_URL),
   });
+});
+
+// sw.js com versão única por boot: celulares instalados buscam a atualização
+// automaticamente no próximo abrir (senão ficariam presos à versão antiga do cache).
+app.get('/sw.js', (_req, res) => {
+  const caminho = path.join(PUBLICO, 'sw.js');
+  const corpo = fs.readFileSync(caminho, 'utf8').replace('__VERSAO__', `marcaz-${BOOT}`);
+  res.type('application/javascript').set('Cache-Control', 'no-store').send(corpo);
 });
 
 // Painel do gestor e Control: páginas fixas (antes do static, senão o

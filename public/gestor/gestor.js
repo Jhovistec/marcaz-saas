@@ -416,7 +416,7 @@ function telaLogin() {
         el('div', { style: 'text-align:center;margin-top:14px' },
           el('a', { class: 'pequeno muted', href: '/control' }, 'Sou da equipe Jhovis → Marcaz Control')
         ),
-        el('div', { style: 'text-align:center;margin-top:10px' }, botaoInstalar('📲 Instalar o app Marcaz'))
+        el('div', { style: 'text-align:center;margin-top:10px' }, botaoInstalar('Instalar o app Marcaz'))
       )
     )
   );
@@ -452,7 +452,7 @@ function telaPainel() {
           )
         ),
         el('div', { class: 'btn-linha' },
-          botaoInstalar('Instalar'),
+          botaoInstalar('Instalar app'),
           sinoNotificacoes(),
           el('a', { class: 'btn btn-fantasma btn-mini', href: `/${c.empresa.slug}`, target: '_blank', rel: 'noopener' }, 'Página do cliente'),
           el('button', {

@@ -263,3 +263,17 @@ select {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   html { scroll-behavior: auto; }
 }
+
+/* ============ guia de instalação do app ============ */
+.ajuda-pwa { max-width: 470px; }
+.passos { margin: 6px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.passos li { font-size: 0.86rem; line-height: 1.55; }
+.passos li::marker { color: var(--prim); font-weight: 800; }
+.passos strong { color: var(--prim); font-weight: 750; }
+.ajuda-endereco {
+  display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  margin-top: 16px; padding: 10px 12px; background: var(--bg-2);
+  border: 1px dashed var(--linha); border-radius: 10px;
+}
+.ajuda-endereco span { word-break: break-all; text-align: left; }
+.botao-instalar { text-transform: none; }

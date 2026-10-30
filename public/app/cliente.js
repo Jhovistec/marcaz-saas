@@ -184,7 +184,7 @@ function telaLogin() {
       formulario
     ),
     el('div', { class: 'rodape-login', style: 'text-align:center;margin-top:10px' },
-      botaoInstalar('📲 Instalar como aplicativo')
+      botaoInstalar('Instalar como aplicativo')
     ),
     el('div', { class: 'rodape-login' },
       el('span', { class: 'pequeno muted' }, 'Ainda não tem cadastro? '),

@@ -1,7 +1,7 @@
 /* Marcaz — service worker
    Estratégia: rede primeiro para a API (nunca cacheia dado), cache primeiro para
    os arquivos da interface — assim o app abre instantâneo quando instalado. */
-const VERSAO = 'marcaz-v1';
+const VERSAO = '__VERSAO__';  // o servidor troca a cada implantação
 const ESTATICOS = [
   '/shared/base.css',
   '/shared/fixes.css',
