@@ -300,3 +300,16 @@
   background: linear-gradient(160deg, var(--prim-2), var(--prim)); color: #06080c;
   font-size: 2.4rem; font-weight: 900; border: 2px solid var(--prim);
 }
+
+/* ============ chamada de cadastro (entre a capa e o painel de login) ============ */
+.chamada-cadastro {
+  text-align: center; margin: 20px 0 2px; padding: 14px 12px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--prim) 9%, transparent), transparent);
+  border: 1px dashed color-mix(in srgb, var(--prim) 42%, transparent);
+  border-radius: var(--raio-sm);
+}
+.chamada-cadastro .link-botao { display: block; width: 100%; font-size: 0.92rem; padding: 4px; text-decoration: none; }
+.chamada-cadastro .link-botao:hover { text-decoration: underline; }
+/* fim do deslize lateral: nada de carrossel no celular */
+.datas { flex-wrap: wrap; overflow: visible; }
+.data-chip { min-width: 0; flex: 1 1 62px; }

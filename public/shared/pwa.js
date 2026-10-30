@@ -25,7 +25,13 @@ export function detectarNavegador() {
 }
 
 /* ---------------- service worker ---------------- */
+/** Rodando dentro do aplicativo de mesa (Electron)? */
+export function dentroDoApp() {
+  return /Marcaz|Electron/i.test(navigator.userAgent || '');
+}
+
 export function registrarSW() {
+  if (dentroDoApp()) return; // no app instalado não faz sentido registrar PWA
   if (!('serviceWorker' in navigator)) return;
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -53,6 +59,7 @@ export function estaInstalado() {
 
 /* ---------------- botão ---------------- */
 export function botaoInstalar(rotulo = 'Instalar o app Marcaz') {
+  if (dentroDoApp()) return el('span', {});
   const b = el('button', {
     class: 'btn btn-fantasma btn-mini botao-instalar', type: 'button', 'data-instalar': '',
     onclick: () => instalar(),

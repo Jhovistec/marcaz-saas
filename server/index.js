@@ -36,6 +36,9 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
 app.use(sessao);
 
+// Porta de entrada de quem chega pelo endereço principal
+app.get('/', (_req, res) => res.sendFile(PUBLICO + '/entrada.html'));
+
 app.use('/api/auth', authRoutes);
 app.use('/api/publico', publicoRoutes);
 app.use('/api/gestor', gestorRoutes);
@@ -81,6 +84,15 @@ app.get('/gestor', (_req, res) => res.sendFile(PUBLICO + '/gestor/index.html'));
 app.get('/control', (_req, res) => res.sendFile(PUBLICO + '/control/index.html'));
 
 app.use(express.static(PUBLICO, { extensions: ['html'] }));
+
+// Arquivos escondidos não são servidos pelo static: este é o vínculo que o
+// Android usa para reconhecer o app empacotado (asset links / Digital Asset Links).
+app.get('/.well-known/assetlinks.json', (_req, res) => {
+  const caminho = path.join(PUBLICO, '.well-known', 'assetlinks.json');
+  if (!fs.existsSync(caminho)) return res.status(404).json({ erro: 'Sem vínculo publicado.' });
+  res.type('application/json').set('Cache-Control', 'public, max-age=3600')
+    .send(fs.readFileSync(caminho, 'utf8'));
+});
 
 // Chart.js vem de /public/vendor (cópia local, sem CDN e sem node_modules no servidor)
 

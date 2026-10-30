@@ -178,17 +178,19 @@ function telaLogin() {
 
   app.replaceChildren(
     capaEmpresa(),
-    el('div', { class: 'card entra', style: 'margin-top:14px' },
-      el('div', { class: 'login-titulo' }, 'Acesse sua conta'),
+    // aviso de cadastro logo abaixo da identidade: o cliente novo vê antes de entrar
+    el('div', { class: 'chamada-cadastro' },
+      el('span', { class: 'pequeno muted' }, 'Ainda não tem cadastro?'),
+      el('button', { class: 'link-botao', type: 'button', onclick: () => telaCadastro() }, 'Criar meu cadastro'),
+      el('div', { class: 'mini muted', style: 'margin-top:2px' }, 'Leva menos de um minuto.')
+    ),
+    el('div', { class: 'card entra', style: 'margin-top:18px' },
+      el('div', { class: 'login-titulo' }, 'Já sou cadastrado'),
       el('div', { class: 'login-sub' }, 'Entre com WhatsApp ou CPF para agendar em segundos.'),
       formulario
     ),
     el('div', { class: 'rodape-login', style: 'text-align:center;margin-top:10px' },
       botaoInstalar('Instalar como aplicativo')
-    ),
-    el('div', { class: 'rodape-login' },
-      el('span', { class: 'pequeno muted' }, 'Ainda não tem cadastro? '),
-      el('button', { class: 'link-botao', type: 'button', onclick: () => telaCadastro() }, 'Criar meu cadastro')
     )
   );
 }
