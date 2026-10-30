@@ -20,5 +20,11 @@
       <a href="https://www.jhovis.com.br" target="_blank" rel="noopener">Desenvolvido por Jhovis Tecnologia Ltda — CNPJ: 53.217.248/0001-75</a>
     </div>
   </main>
+  <script>
+    // dentro do aplicativo de mesa só existe o painel do gestor
+    if (/Marcaz|Electron/i.test(navigator.userAgent)) {
+      document.getElementById('linkControl')?.remove();
+    }
+  </script>
 </body>
 </html>

@@ -1,0 +1,64 @@
+{
+  "name": "marcaz-desktop",
+  "productName": "Marcaz",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Marcaz \u2014 aplicativo do gestor (Jhovis Tecnologia)",
+  "author": "Jhovis Tecnologia Ltda <contato@jhovis.com.br>",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "gerar": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "br.com.jhovis.marcaz",
+    "productName": "Marcaz",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "janela.html",
+      "offline.html"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Marcaz-${version}.${ext}",
+      "signAndEditExecutable": false,
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Marcaz",
+      "installerLanguages": [
+        "pt_BR"
+      ],
+      "language": "1046",
+      "deleteAppDataOnUninstall": false
+    },
+    "electronVersion": "33.4.11",
+    "electronDist": "runtime",
+    "asar": true,
+    "publish": null
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}

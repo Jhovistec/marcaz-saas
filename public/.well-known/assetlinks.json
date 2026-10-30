@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.marcaz_saas_qjpm.twa",
+        "sha256_cert_fingerprints": ["19:2D:1E:39:B6:1D:DE:42:F8:49:BB:78:95:C1:78:65:40:64:23:95:5A:F0:98:7F:A1:A0:CA:87:06:98:08:0C"]
+      }
+    }]

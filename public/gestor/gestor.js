@@ -4,7 +4,7 @@ import {
   abrirModal, fecharModal, ligaModalFechamento, isoParaData, diaCurto, sucesso,
   imagemComFallback,
 } from '/shared/app.js';
-import { registrarSW, botaoInstalar } from '/shared/pwa.js';
+import { registrarSW, botaoInstalar, dentroDoApp } from '/shared/pwa.js';
 
 const app = $('#app');
 $('#rodape').append(rodapeJhovis());
@@ -413,7 +413,8 @@ function telaLogin() {
           ),
           form
         ),
-        el('div', { style: 'text-align:center;margin-top:14px' },
+        // dentro do aplicativo de mesa só existe o painel do gestor
+        dentroDoApp() ? null : el('div', { style: 'text-align:center;margin-top:14px' },
           el('a', { class: 'pequeno muted', href: '/control' }, 'Sou da equipe Jhovis → Marcaz Control')
         ),
         el('div', { style: 'text-align:center;margin-top:10px' }, botaoInstalar('Instalar o app Marcaz'))
@@ -441,6 +442,21 @@ function telaPainel() {
   const abas = ABAS.filter(([, , perm]) => pode(perm));
   if (!abas.some(([id]) => id === S.aba)) S.aba = abas[0][0];
 
+  // Se a estrutura já está na tela, trocamos só o conteúdo: isso tira o "tranco"
+  // ao clicar (a barra superior e as abas não são recriadas a cada ação).
+  const assinatura = `${c.empresa.slug}|${c.usuario.id}|${c.empresa.nome}|${abas.map((a) => a[0]).join(',')}`;
+  const conteudoPronto = document.getElementById('conteudo');
+  if (conteudoPronto && S.assinatura === assinatura) {
+    document.querySelectorAll('.nav-abas .aba').forEach((el2) => {
+      el2.classList.toggle('ativa', el2.dataset.aba === S.aba);
+    });
+    conteudoPronto.replaceChildren();
+    desenharAba(conteudoPronto);
+    cuidarTimerDaAgenda();
+    return;
+  }
+  S.assinatura = assinatura;
+
   app.replaceChildren(
     el('div', { class: 'topbar' },
       el('div', { class: 'topbar-inner' },
@@ -466,7 +482,7 @@ function telaPainel() {
       el('div', { class: 'nav-abas' },
         abas.map(([id, rotulo]) =>
           el('button', {
-            class: `aba${S.aba === id ? ' ativa' : ''}`, type: 'button',
+            class: `aba${S.aba === id ? ' ativa' : ''}`, type: 'button', 'data-aba': id,
             onclick: () => { if (S.aba !== id) { S.aba = id; telaPainel(); } },
           }, rotulo)
         )
@@ -475,26 +491,35 @@ function telaPainel() {
     )
   );
 
-  const alvo = $('#conteudo');
+  desenharAba($('#conteudo'));
+  cuidarTimerDaAgenda();
+}
+
+function desenharAba(alvo) {
   const render = {
     agenda: abaAgenda, servicos: abaServicos, promocoes: abaPromocoes, equipe: abaEquipe,
     clientes: abaClientes, horarios: abaHorarios, financeiro: abaFinanceiro, avisos: abaAvisos,
   }[S.aba];
-  // se a sessão caiu enquanto a pessoa estava na tela, a aba devolve 401:
-  // mandamos de volta ao login com aviso, em vez de deixar o botão sem efeito.
+  // se a sessão caiu no servidor, volta ao login com aviso (sem botão morto)
   Promise.resolve(render(alvo)).catch((e) => { if (!trataSessao(e)) console.error(e); });
+}
 
+/** A agenda se atualiza sozinha a cada 30s, enquanto a pessoa estiver nela. */
+function cuidarTimerDaAgenda() {
   if (S.timer) clearInterval(S.timer);
-  if (S.aba === 'agenda') {
-    S.timer = setInterval(async () => {
-      if (S.aba !== 'agenda') return;
+  if (S.aba !== 'agenda') return;
+  S.timer = setInterval(async () => {
+    if (S.aba !== 'agenda') return;
+    try {
       await carregarAgenda();
-      const lista = $('#listaAgenda');
-      if (lista) lista.replaceWith(blocoListaAgenda());
-      const kpis = $('#kpisAgenda');
-      if (kpis) kpis.replaceWith(blocoKpis());
-    }, 30000);
-  }
+    } catch { return; }
+    const lista = $('#listaAgenda');
+    if (lista) lista.replaceWith(blocoListaAgenda());
+    const kpis = $('#kpisAgenda');
+    if (kpis) kpis.replaceWith(blocoKpis());
+    const fila = document.getElementById('painelFila');
+    if (fila) await carregarFila();
+  }, 30000);
 }
 
 /* ============================ agenda ============================ */

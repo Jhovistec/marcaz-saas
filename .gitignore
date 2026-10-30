@@ -9,3 +9,7 @@ config.env
 .revisao/conferir.mjs
 .revisao/teste-tradutor.mjs
 .revisao/testa-rls.mjs
+
+desktop/runtime/
+desktop/dist/
+desktop/node_modules/
