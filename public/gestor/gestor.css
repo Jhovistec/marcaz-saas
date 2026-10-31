@@ -283,7 +283,8 @@ img.marca-logo { object-fit: cover; background: var(--card); }
 
 /* ============ logo do app na tela de login ============ */
 .logo-app-login {
-  display: block; margin: 0 auto 14px; width: 72px; height: 72px;
-  border-radius: 50%; background: #fff; object-fit: cover;
-  box-shadow: 0 10px 26px color-mix(in srgb, var(--prim) 22%, transparent);
+  display: block; margin: 0 auto 14px; width: 84px; height: 84px;
+  border-radius: 50%; object-fit: contain;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--prim) 22%, transparent),
+              0 0 0 1px color-mix(in srgb, var(--prim) 26%, transparent);
 }

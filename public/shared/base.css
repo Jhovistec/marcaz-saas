@@ -284,9 +284,13 @@ select {
 .olho-senha {
   position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
   width: 34px; height: 34px; border-radius: 9px; border: none; cursor: pointer;
-  background: transparent; font-size: 1.05rem; line-height: 1;
+  background: transparent; line-height: 1;
   display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s, opacity 0.15s;
+  /* o botão do sistema vem com cor própria (quase preta); sem isto o olho
+     desaparecia no fundo escuro. Aqui ele segue a cor do texto do campo. */
+  color: var(--txt-2);
+  transition: background 0.15s, color 0.15s;
 }
-.olho-senha:hover { background: color-mix(in srgb, var(--prim) 16%, transparent); }
+.olho-senha:hover { background: color-mix(in srgb, var(--prim) 16%, transparent); color: var(--prim); }
+.olho-senha[aria-pressed="true"] { color: var(--prim); }
 .olho-senha:focus-visible { outline: 2px solid var(--prim); outline-offset: 1px; }
