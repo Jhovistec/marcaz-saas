@@ -6,8 +6,9 @@ const ESTATICOS = [
   '/shared/base.css',
   '/shared/fixes.css',
   '/shared/app.js',
+  '/shared/marcaz-app-512.png',
+  '/shared/marcaz-app-192.png',
   '/shared/emblema.png',
-  '/shared/emblema-192.png',
   '/gestor/gestor.css',
   '/gestor/gestor.js',
   '/app/cliente.css',
@@ -39,15 +40,21 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // arquivos fixos: cache primeiro
-  e.respondWith(
-    caches.match(e.request).then((pronto) => pronto
-      || fetch(e.request).then((r) => {
-        if (r.ok && url.origin === self.location.origin) {
-          const copia = r.clone();
-          caches.open(VERSAO).then((c) => c.put(e.request, copia));
-        }
-        return r;
-      }).catch(() => pronto))
-  );
+  // Arquivos da interface: rede primeiro, cache como reserva. Assim que a
+  // correção sobe para o servidor, ela chega no celular do cliente na hora —
+  // e continua abrindo quando estiver sem internet.
+  const naRede = () => fetch(e.request).then((r) => {
+    if (r.ok && url.origin === self.location.origin) {
+      const copia = r.clone();
+      caches.open(VERSAO).then((c) => c.put(e.request, copia));
+    }
+    return r;
+  });
+  const noCache = async () => (await caches.match(e.request)) || (await caches.match(url.pathname)) || null;
+
+  if (url.pathname.startsWith('/shared/') || url.pathname.startsWith('/vendor/')) {
+    e.respondWith(naRede().catch(async () => (await noCache()) || Response.error()));
+    return;
+  }
+  e.respondWith(noCache().then((pronto) => pronto || naRede().catch(() => Response.error())));
 });
