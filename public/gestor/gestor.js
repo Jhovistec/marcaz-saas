@@ -407,8 +407,8 @@ function telaLogin() {
       el('div', { class: 'login-caixa entra' },
         el('div', { class: 'card' },
           el('div', { style: 'text-align:center;margin-bottom:22px' },
-            el('img', { class: 'logo-app-login', src: '/shared/emblema.png', alt: 'Marcaz', width: 68, height: 68 }),
-            el('div', { style: 'font-weight:800;font-size:1.05rem' }, 'Marcaz — Painel do Gestor'),
+            el('img', { class: 'logo-app-login', src: '/shared/emblema.png?v=2', alt: 'Marcaz', width: 72, height: 72 }),
+            el('div', { style: 'font-weight:800;font-size:1.05rem' }, 'Painel do Gestor'),
             el('div', { class: 'pequeno muted', style: 'margin-top:4px' }, 'Entre com o acesso do seu estabelecimento')
           ),
           form
