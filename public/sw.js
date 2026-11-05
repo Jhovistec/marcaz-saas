@@ -52,7 +52,11 @@ self.addEventListener('fetch', (e) => {
   });
   const noCache = async () => (await caches.match(e.request)) || (await caches.match(url.pathname)) || null;
 
-  if (url.pathname.startsWith('/shared/') || url.pathname.startsWith('/vendor/')) {
+  // Qualquer arquivo de código (js/css/ícone) vai primeiro à rede: assim uma
+  // correção publicada chega no celular/app instalado na hora, em vez de ficar
+  // preso na versão antiga do cache.
+  const codigo = /\.(js|css|png|jpg|jpeg|webp|svg|webmanifest)$/i.test(url.pathname);
+  if (codigo) {
     e.respondWith(naRede().catch(async () => (await noCache()) || Response.error()));
     return;
   }
