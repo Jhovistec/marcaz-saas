@@ -5,6 +5,7 @@ import {
   imagemComFallback,
 } from '/shared/app.js';
 import { registrarSW, botaoInstalar, dentroDoApp } from '/shared/pwa.js';
+import { abrirRecorte } from '/shared/recorte.js?v=1';
 
 const app = $('#app');
 $('#rodape').append(rodapeJhovis());
@@ -1307,16 +1308,19 @@ async function abaHorarios(alvo) {
   btnLogo.onclick = () => arqLogo.click();
   arqLogo.onchange = async () => {
     const arquivo = arqLogo.files && arqLogo.files[0];
+    arqLogo.value = '';
     if (!arquivo) return;
     try {
-      const url = await comprimirImagemParaUrl(arquivo, 256);
+      // abre o recorte com a caixa pontilhada antes de salvar
+      const url = await abrirRecorte(arquivo, { titulo: 'Ajustar a logomarca' });
+      if (!url) return;
       await put('/api/gestor/empresa', { logo_url: url });
       S.contexto = await get('/api/gestor/contexto');
       logo.input.value = '';
       sucesso('Logomarca atualizada — já está no seu painel e na página do cliente.');
       telaPainel();
     } catch (err) {
-      alert(err.message || 'Não foi possível enviar a imagem.');
+      sucesso(err.message || 'Não foi possível enviar a imagem.');
     }
   };
   const instagram = campo('Instagram', e.instagram);
