@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   notif_ativa   INTEGER NOT NULL DEFAULT 1,
   nascimento    TEXT,           -- AAAA-MM-DD; usamos só dia/mês (aniversário)
   ativo         INTEGER NOT NULL DEFAULT 1,
+  bloqueado     INTEGER NOT NULL DEFAULT 0,   -- cliente bloqueado pelo gestor
+  bloqueado_em  TEXT,
   criado_em     TEXT NOT NULL DEFAULT {NOW}
 );
 CREATE INDEX IF NOT EXISTS ix_usuarios_empresa ON usuarios(empresa_id);
@@ -139,10 +141,29 @@ CREATE TABLE IF NOT EXISTS agendamentos (
   atraso_min      INTEGER NOT NULL DEFAULT 0,
   grupo           TEXT,          -- mesmo valor = serviços da mesma visita
   concluido_em    TEXT,
+  pagamento       TEXT NOT NULL DEFAULT 'nenhum',  -- nenhum|aguardando|aceito|liberado
+  comprovante     TEXT,          -- imagem do comprovante (data URL)
+  data_especial_id INTEGER,      -- quando o horário é de uma data especial
   criado_em       TEXT NOT NULL DEFAULT {NOW}
 );
 CREATE INDEX IF NOT EXISTS ix_ag_empresa_data ON agendamentos(empresa_id, data);
 CREATE INDEX IF NOT EXISTS ix_ag_prof ON agendamentos(profissional_id, data);
+
+CREATE TABLE IF NOT EXISTS datas_especiais (
+  id            INTEGER PRIMARY KEY {PK},
+  empresa_id    INTEGER NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  data          TEXT NOT NULL,
+  titulo        TEXT,
+  modo          TEXT NOT NULL DEFAULT 'valor',   -- valor | pct
+  valor_cent    INTEGER NOT NULL DEFAULT 0,
+  valor_pct     INTEGER NOT NULL DEFAULT 0,
+  chave_pix     TEXT,
+  link_pagamento TEXT,
+  instrucoes    TEXT,
+  ativo         INTEGER NOT NULL DEFAULT 1,
+  criado_em     TEXT NOT NULL DEFAULT {NOW}
+);
+CREATE INDEX IF NOT EXISTS ix_especiais_empresa ON datas_especiais(empresa_id, data);
 
 CREATE TABLE IF NOT EXISTS notificacoes (
   id             INTEGER PRIMARY KEY {PK},
@@ -176,6 +197,11 @@ const MIGRACOES = [
   ['agendamentos', 'atraso_min', 'INTEGER NOT NULL DEFAULT 0'],
         ['agendamentos', 'grupo', 'TEXT'],
   ['agendamentos', 'concluido_em', 'TEXT'],
+  ['agendamentos', 'pagamento', "TEXT NOT NULL DEFAULT 'nenhum'"],
+  ['agendamentos', 'comprovante', 'TEXT'],
+  ['agendamentos', 'data_especial_id', 'INTEGER'],
+  ['usuarios', 'bloqueado', 'INTEGER NOT NULL DEFAULT 0'],
+  ['usuarios', 'bloqueado_em', 'TEXT'],
 ];
 
 /* ============================ utilidades comuns ============================ */

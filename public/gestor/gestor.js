@@ -433,6 +433,7 @@ const ABAS = [
   ['horarios', '⚙️ Configurações', 'horarios'],
   ['financeiro', '📊 Financeiro', 'financeiro'],
   ['avisos', '🔔 Avisos', 'agenda'],
+  ['especiais', '⭐ Datas especiais', 'agenda'],
 ];
 
 function telaPainel() {
@@ -499,6 +500,7 @@ function desenharAba(alvo) {
   const render = {
     agenda: abaAgenda, servicos: abaServicos, promocoes: abaPromocoes, equipe: abaEquipe,
     clientes: abaClientes, horarios: abaHorarios, financeiro: abaFinanceiro, avisos: abaAvisos,
+    especiais: abaEspeciais,
   }[S.aba];
   // se a sessão caiu no servidor, volta ao login com aviso (sem botão morto)
   Promise.resolve(render(alvo)).catch((e) => { if (!trataSessao(e)) console.error(e); });
@@ -521,6 +523,101 @@ function cuidarTimerDaAgenda() {
     if (fila) await carregarFila();
   }, 30000);
 }
+
+/* ======================= datas especiais ======================= */
+async function abaEspeciais(alvo) {
+  const r = await get('/api/gestor/datas-especiais').catch(() => ({ datas: [] }));
+  const datas = r.datas || [];
+  const hoje = hojeISO();
+
+  const campoData = el('input', { type: 'date', value: '' });
+  const campoTitulo = el('input', { placeholder: 'Ex.: Véspera de Natal', maxlength: '60' });
+  const modo = el('select', {},
+    el('option', { value: 'valor' }, 'Valor em R$'),
+    el('option', { value: 'pct' }, 'Porcentagem (%)'));
+  const campoValor = el('input', { placeholder: 'Ex.: 30,00', inputmode: 'decimal' });
+  const campoPct = el('input', { placeholder: 'Ex.: 30', inputmode: 'numeric', style: 'display:none' });
+  const campoPix = el('input', { placeholder: 'Chave PIX (CPF, telefone, e-mail, aleatória)' });
+  const campoLink = el('input', { placeholder: 'Link de pagamento (opcional)' });
+  const campoObs = el('input', { placeholder: 'Instruções para o cliente (opcional)', maxlength: '120' });
+  const alerta = el('div', { class: 'alerta' });
+
+  modo.onchange = () => {
+    const ehPct = modo.value === 'pct';
+    campoValor.style.display = ehPct ? 'none' : '';
+    campoPct.style.display = ehPct ? '' : 'none';
+  };
+
+  const lista = el('div', { class: 'lista-datas' },
+    datas.length
+      ? datas.map((d) => el('div', { class: 'linha-data' },
+          el('div', {},
+            el('div', { style: 'font-weight:750' }, d.titulo || 'Data especial'),
+            el('div', { class: 'mini muted' },
+              `${dataLonga(d.data)} · antecipado ${d.modo === 'pct' ? d.valor_pct + '%' : brl(d.valor_cent)}` +
+              `${d.chave_pix ? ' · PIX ' + d.chave_pix : ''}${d.link_pagamento ? ' · com link' : ''}`),
+            d.data < hoje ? el('div', { class: 'mini muted' }, 'Data já passou') : null
+          ),
+          el('button', { class: 'btn btn-fantasma btn-mini', type: 'button',
+            onclick: async () => {
+              if (!confirm(`Remover a data especial de ${dataLonga(d.data)}?`)) return;
+              await del(`/api/gestor/datas-especiais/${d.id}`).catch(() => {});
+              sucesso('Data especial removida.');
+              telaPainel();
+            } }, 'Remover')
+        ))
+      : el('p', { class: 'muted pequeno' }, 'Nenhuma data especial marcada ainda.')
+  );
+
+  alvo.append(
+    el('div', { class: 'card' },
+      el('div', { class: 'card-titulo' }, '⭐ Marcar uma data especial'),
+      el('p', { class: 'ajuda', style: 'margin-bottom:14px' },
+        'Nessa data o cliente paga antecipado para reservar o horário: ele envia o comprovante, o horário fica bloqueado e você confirma em ACEITO ou libera.'),
+      el('div', { class: 'linha-campos' },
+        el('div', { class: 'campo' }, el('label', {}, 'Data'), campoData),
+        el('div', { class: 'campo' }, el('label', {}, 'Nome da data'), campoTitulo)
+      ),
+      el('div', { class: 'linha-campos' },
+        el('div', { class: 'campo' }, el('label', {}, 'Tipo de antecipação'), modo),
+        el('div', { class: 'campo' }, el('label', {}, 'Valor'), campoValor, campoPct)
+      ),
+      el('div', { class: 'campo' }, el('label', {}, 'Chave PIX'), campoPix),
+      el('div', { class: 'campo' }, el('label', {}, 'Link de pagamento'), campoLink),
+      el('div', { class: 'campo' }, el('label', {}, 'Observação'), campoObs),
+      alerta,
+      el('button', { class: 'btn btn-bloco', type: 'button',
+        onclick: async (ev) => {
+          limpaAviso(alerta);
+          ev.currentTarget.disabled = true;
+          try {
+            const cent = Math.round(Number(String(campoValor.value).replace(/\./g, '').replace(',', '.')) * 100) || 0;
+            await post('/api/gestor/datas-especiais', {
+              data: campoData.value,
+              titulo: campoTitulo.value,
+              modo: modo.value,
+              valor_cent: cent,
+              valor_pct: Number(campoPct.value) || 0,
+              chave_pix: campoPix.value,
+              link_pagamento: campoLink.value,
+              instrucoes: campoObs.value,
+            });
+            sucesso('Data especial salva.');
+            telaPainel();
+          } catch (e) {
+            if (trataSessao(e)) return;
+            aviso(alerta, 'erro', e.message);
+            ev.currentTarget.disabled = false;
+          }
+        } }, 'Salvar data especial')
+    ),
+    el('div', { class: 'card' },
+      el('div', { class: 'card-titulo' }, 'Datas marcadas', el('span', { class: 'tag prim' }, String(datas.length))),
+      lista
+    )
+  );
+}
+
 
 /* ============================ agenda ============================ */
 async function carregarAgenda() {
@@ -640,6 +737,7 @@ async function abaAgenda(alvo) {
       )
     ),
     el('div', { class: 'datas', style: 'margin-bottom:14px' }, chips),
+    await blocoComprovantes(),
     blocoFila(),
     blocoKpis(),
     el('div', { class: 'card' },
@@ -649,6 +747,77 @@ async function abaAgenda(alvo) {
     )
   );
 }
+
+/** Comprovantes de data especial: sempre no topo, acima dos agendamentos comuns. */
+async function blocoComprovantes() {
+  let lista = [];
+  try {
+    lista = (await get('/api/gestor/comprovantes')).comprovantes || [];
+  } catch {
+    return el('div');
+  }
+  if (!lista.length) return el('div');
+  const cartao = el('div', { class: 'card card-especial' },
+    el('div', { class: 'card-titulo' }, '⭐ Datas especiais — precisam da sua decisão',
+      el('span', { class: 'tag prim' }, String(lista.filter((c) => c.pagamento === 'aguardando').length))),
+    el('div', { class: 'lista-especial' }, lista.map((c) => linhaComprovante(c)))
+  );
+  return cartao;
+}
+
+function linhaComprovante(c) {
+  const valor = c.modo === 'pct'
+    ? `${c.valor_pct}%`
+    : brl(c.valor_cent || 0);
+  const verComprovante = el('button', { class: 'btn btn-fantasma btn-mini', type: 'button' }, '📎 Ver comprovante');
+  verComprovante.onclick = () => {
+    if (!c.comprovante) return aviso(el('div'), 'erro', 'Sem comprovante anexado.');
+    document.body.append(el('div', { class: 'modal-fundo', id: 'modalComprovante' },
+      el('div', { class: 'modal' },
+        el('h3', {}, `Comprovante — ${c.cliente || 'cliente'}`),
+        el('p', { class: 'modal-sub' }, `${dataLonga(c.data)} às ${c.hora} · ${c.servico || ''} · antecipado ${valor}`),
+        el('img', { src: c.comprovante, alt: 'Comprovante', style: 'width:100%;border-radius:12px;border:1px solid var(--borda)' }),
+        el('button', { class: 'btn btn-bloco', type: 'button', style: 'margin-top:12px', onclick: () => fecharModal('modalComprovante') }, 'Fechar')
+      )));
+    janelaModal('modalComprovante');
+  };
+
+  const linha = el('div', { class: 'linha-especial' },
+    el('div', { class: 'info-especial' },
+      el('div', { class: 'nome-especial' }, c.cliente || 'Cliente'),
+      el('div', { class: 'mini muted' }, `${dataLonga(c.data)} às ${c.hora} · ${c.servico || ''}`),
+      el('div', { class: 'mini muted' }, `Antecipado: ${valor}${c.chave_pix ? ' · PIX ' + c.chave_pix : ''}${c.link_pagamento ? ' · link enviado' : ''}`)
+    ),
+    el('div', { class: 'acoes-especial' },
+      verComprovante,
+      c.pagamento === 'aguardando'
+        ? el('button', { class: 'btn btn-mini btn-ok', type: 'button', onclick: () => decidirComprovante(c, 'aceitar') }, '✔ ACEITO')
+        : el('span', { class: 'tag' }, 'Confirmado'),
+      c.pagamento === 'aguardando'
+        ? el('button', { class: 'btn btn-mini btn-fantasma', type: 'button', onclick: () => decidirComprovante(c, 'liberar') }, 'Liberar')
+        : el('button', { class: 'btn btn-mini btn-fantasma', type: 'button', onclick: () => decidirComprovante(c, 'desfazer-liberacao') }, '↩ Desfazer')
+    )
+  );
+  return linha;
+}
+
+async function decidirComprovante(c, acao) {
+  try {
+    const r = await post(`/api/gestor/agenda/${c.id}/${acao}`, {});
+    if (acao === 'liberar') {
+      sucesso(r.aviso || 'O horário foi liberado, entre em contato com o seu cliente para solicitar a chave PIX dele e efetuar a devolução do valor.');
+    } else if (acao === 'aceitar') {
+      sucesso('Horário confirmado e reservado.');
+    } else {
+      sucesso('Liberação desfeita: o horário voltou a aguardar decisão.');
+    }
+    await carregarAgenda();
+    telaPainel();
+  } catch (e) {
+    if (!trataSessao(e)) sucesso(e.message);
+  }
+}
+
 
 async function modalNovoAgendamento() {
   if (!S.servicos.length) S.servicos = (await get('/api/gestor/servicos').catch(() => ({ servicos: [] }))).servicos;
@@ -970,6 +1139,23 @@ async function abaEquipe(alvo) {
 }
 
 /* ============================ clientes ============================ */
+/** Bloquear/desbloquear um cliente: bloqueado, ele não consegue mais agendar. */
+async function alternarBloqueio(c, bloquear) {
+  const texto = bloquear
+    ? `Bloquear ${c.nome}? Ele não conseguirá mais agendar e, ao entrar no app, verá a mensagem "estamos sem vagas no momento".`
+    : `Desbloquear ${c.nome}? Ele volta a poder agendar normalmente.`;
+  if (!confirm(texto)) return;
+  try {
+    await post(`/api/gestor/clientes/${c.id}/bloquear`, { bloquear });
+    sucesso(bloquear ? 'Cliente bloqueado.' : 'Cliente desbloqueado.');
+    S.clientes = null;
+    telaPainel();
+  } catch (e) {
+    if (!trataSessao(e)) sucesso(e.message);
+  }
+}
+
+
 async function abaClientes(alvo) {
   const dados = await get('/api/gestor/clientes');
   S.clientes = dados.clientes;
@@ -1025,7 +1211,14 @@ async function abaClientes(alvo) {
               url ? el('a', { class: 'btn-whats', href: url, target: '_blank', rel: 'noopener', title: 'Falar no WhatsApp' }, 'WhatsApp') : null
             )
           ),
-          el('td', {}, el('span', { class: classe }, rot)),
+          el('td', {}, el('span', { class: classe }, rot),
+            c.bloqueado
+              ? el('div', {}, el('span', { class: 'tag off' }, 'Bloqueado'),
+                  el('button', { class: 'btn btn-fantasma btn-mini', type: 'button', style: 'margin-left:6px',
+                    onclick: () => alternarBloqueio(c, false) }, 'Desbloquear'))
+              : el('button', { class: 'btn btn-fantasma btn-mini', type: 'button', style: 'margin-top:4px',
+                  onclick: () => alternarBloqueio(c, true) }, 'Bloquear')
+          ),
           el('td', { class: 'muted' }, c.ultima ? `${dataLonga(c.ultima)} (há ${c.dias_desde} dias)` : '—')
         );
       }))
