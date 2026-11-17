@@ -9,6 +9,8 @@ import {
   haConflito,
   hhmm,
   minutos,
+  especialDaData,
+  valorAntecipado,
 } from '../lib/agenda.js';
 import { normalizaDiasAgenda, MAX_DIAS_AGENDA } from '../lib/janela.js';
 import { criarNotificacao, notificarNovoAgendamento } from '../lib/notificacoes.js';
@@ -61,7 +63,7 @@ router.get('/agenda', exigePermissao('agenda'), async (req, res) => {
        LEFT JOIN usuarios c ON c.id = a.cliente_id
        WHERE a.empresa_id = ? AND a.data = ? AND a.status <> 'cancelado'
          AND (? = 0 OR a.profissional_id = ?)
-       ORDER BY a.hora`
+       ORDER BY CASE WHEN a.pagamento IN ('aguardando','aceito') THEN 0 ELSE 1 END, a.hora`
     )
     .all(e.id, data, soMeus ? 1 : 0, req.usuario.id);
   res.json({ data, agendamentos: ags, profissional_logado: soMeus ? req.usuario.id : null });
@@ -517,7 +519,8 @@ router.get('/clientes', exigePermissao('agenda'), async (req, res) => {
   if (!e) return;
   const clientes = await db
     .prepare(
-      `SELECT u.id, u.nome, u.telefone, u.nascimento, COUNT(a.id) AS agendamentos, MAX(a.data) AS ultima,
+      `SELECT u.id, u.nome, u.telefone, u.nascimento, u.bloqueado, u.bloqueado_em,
+              COUNT(a.id) AS agendamentos, MAX(a.data) AS ultima,
               COUNT(CASE WHEN a.status = 'concluido' THEN 1 END) AS visitas,
               SUM(CASE WHEN a.status = 'concluido' THEN a.preco_cent ELSE 0 END) AS gasto_total_cent
        FROM usuarios u LEFT JOIN agendamentos a ON a.cliente_id = u.id AND a.status <> 'cancelado'
@@ -771,5 +774,159 @@ router.get('/financeiro', exigePermissao('financeiro'), async (req, res) => {
     topProfissionais: agrupar('profissional').map((s) => ({ nome: s.nome, qtd: s.qtd, bruto: s.bruto })),
   });
 });
+
+/* ================= datas especiais (pagamento antecipado) ================= */
+
+const MODOS = ['valor', 'pct'];
+
+router.get('/datas-especiais', exigePermissao('agenda'), async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const lista = await db
+    .prepare('SELECT * FROM datas_especiais WHERE empresa_id = ? ORDER BY data DESC')
+    .all(e.id);
+  res.json({ datas: lista, hoje: hojeISO() });
+});
+
+router.post('/datas-especiais', exigePermissao('agenda'), async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const { data, titulo, modo, valor_cent, valor_pct, chave_pix, link_pagamento, instrucoes } = req.body || {};
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(data || ''))) return res.status(400).json({ erro: 'Informe a data.' });
+  const m = MODOS.includes(modo) ? modo : 'valor';
+  if (m === 'valor' && !(Number(valor_cent) > 0)) return res.status(400).json({ erro: 'Informe o valor em reais.' });
+  if (m === 'pct' && !(Number(valor_pct) > 0 && Number(valor_pct) <= 100)) return res.status(400).json({ erro: 'Informe a porcentagem (1 a 100).' });
+  if (!String(chave_pix || '').trim() && !String(link_pagamento || '').trim()) {
+    return res.status(400).json({ erro: 'Informe a chave PIX ou o link de pagamento.' });
+  }
+  const ja = await especialDaData(e.id, data);
+  const args = [data, String(titulo || 'Data especial').trim(), m,
+    Math.max(0, Number(valor_cent) || 0), Math.max(0, Number(valor_pct) || 0),
+    String(chave_pix || '').trim() || null, String(link_pagamento || '').trim() || null,
+    String(instrucoes || '').trim() || null];
+  if (ja) {
+    await db.prepare(
+      `UPDATE datas_especiais SET data = ?, titulo = ?, modo = ?, valor_cent = ?, valor_pct = ?,
+         chave_pix = ?, link_pagamento = ?, instrucoes = ?, ativo = 1 WHERE id = ?`
+    ).run(...args, ja.id);
+    return res.json({ ok: true, id: ja.id, atualizada: true });
+  }
+  const info = await db.prepare(
+    `INSERT INTO datas_especiais (empresa_id, data, titulo, modo, valor_cent, valor_pct, chave_pix, link_pagamento, instrucoes)
+     VALUES (?,?,?,?,?,?,?,?,?)`
+  ).run(e.id, ...args);
+  res.status(201).json({ ok: true, id: info.lastInsertRowid });
+});
+
+router.delete('/datas-especiais/:id', exigePermissao('agenda'), exigeIdNumerico, async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  await db.prepare('DELETE FROM datas_especiais WHERE id = ? AND empresa_id = ?').run(req.params.id, e.id);
+  res.json({ ok: true });
+});
+
+/** Lista de comprovantes aguardando decisão (para o topo da agenda). */
+router.get('/comprovantes', exigePermissao('agenda'), async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const lista = await db
+    .prepare(
+      `SELECT a.id, a.data, a.hora, a.duracao_min, a.preco_cent, a.pagamento, a.comprovante,
+              a.data_especial_id, s.nome AS servico, p.nome AS profissional,
+              c.nome AS cliente, c.telefone AS cliente_telefone, d.titulo AS especial, d.modo,
+              d.valor_cent, d.valor_pct, d.chave_pix, d.link_pagamento
+       FROM agendamentos a
+       LEFT JOIN servicos s ON s.id = a.servico_id
+       LEFT JOIN usuarios p ON p.id = a.profissional_id
+       LEFT JOIN usuarios c ON c.id = a.cliente_id
+       LEFT JOIN datas_especiais d ON d.id = a.data_especial_id
+       WHERE a.empresa_id = ? AND a.status <> 'cancelado'
+         AND a.pagamento IN ('aguardando','aceito')
+       ORDER BY CASE WHEN a.pagamento = 'aguardando' THEN 0 ELSE 1 END, a.data, a.hora`
+    )
+    .all(e.id);
+  res.json({ comprovantes: lista });
+});
+
+/** A decisão vale para a visita inteira (todos os serviços marcados juntos). */
+async function atualizarPagamento(ag, pagamento) {
+  if (ag.grupo) {
+    await db.prepare('UPDATE agendamentos SET pagamento = ? WHERE grupo = ? AND data = ? AND status <> ?')
+      .run(pagamento, ag.grupo, ag.data, 'cancelado');
+    return;
+  }
+  await db.prepare('UPDATE agendamentos SET pagamento = ? WHERE id = ?').run(pagamento, ag.id);
+}
+
+/** ACEITO: o horário fica reservado oficialmente. */
+router.post('/agenda/:id/aceitar', exigePermissao('agenda'), exigeIdNumerico, async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const ag = await db.prepare('SELECT * FROM agendamentos WHERE id = ? AND empresa_id = ?').get(req.params.id, e.id);
+  if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado.' });
+  await atualizarPagamento(ag, 'aceito');
+  await criarNotificacao({
+    empresaId: e.id, usuarioId: ag.cliente_id, tipo: 'pagamento',
+    titulo: 'Pagamento confirmado',
+    texto: `Seu horário de ${ag.data} às ${ag.hora} está confirmado. Até lá!`,
+    agendamentoId: ag.id,
+  });
+  res.json({ ok: true, pagamento: 'aceito' });
+});
+
+/** LIBERAR: solta o horário. Dá para desfazer por 5 minutos. */
+router.post('/agenda/:id/liberar', exigePermissao('agenda'), exigeIdNumerico, async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const ag = await db.prepare('SELECT * FROM agendamentos WHERE id = ? AND empresa_id = ?').get(req.params.id, e.id);
+  if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado.' });
+  const anterior = ag.pagamento;
+  await atualizarPagamento(ag, 'liberado');
+  await criarNotificacao({
+    empresaId: e.id, usuarioId: null, tipo: 'liberado',
+    titulo: 'Horário liberado',
+    texto: 'O horário foi liberado, entre em contato com o seu cliente para solicitar a chave PIX dele e efetuar a devolução do valor.',
+    agendamentoId: ag.id,
+  });
+  res.json({
+    ok: true,
+    pagamento: 'liberado',
+    anterior,
+    desfazer_ate: new Date(Date.now() + 5 * 60000).toISOString(),
+    aviso: 'O horário foi liberado, entre em contato com o seu cliente para solicitar a chave PIX dele e efetuar a devolução do valor.',
+  });
+});
+
+/** DESFAZER a liberação (dentro de 5 minutos). */
+router.post('/agenda/:id/desfazer-liberacao', exigePermissao('agenda'), exigeIdNumerico, async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const ag = await db.prepare('SELECT * FROM agendamentos WHERE id = ? AND empresa_id = ?').get(req.params.id, e.id);
+  if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado.' });
+  if (ag.pagamento !== 'liberado') return res.status(400).json({ erro: 'Este horário não está liberado.' });
+  await atualizarPagamento(ag, 'aguardando');
+  res.json({ ok: true, pagamento: 'aguardando' });
+});
+
+/* ======================= clientes: bloquear / desbloquear ======================= */
+
+router.post('/clientes/:id/bloquear', exigePermissao('agenda'), exigeIdNumerico, async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const c = await db
+    .prepare(`SELECT * FROM usuarios WHERE id = ? AND empresa_id = ? AND papel = 'cliente'`)
+    .get(req.params.id, e.id);
+  if (!c) return res.status(404).json({ erro: 'Cliente não encontrado.' });
+  const bloquear = req.body?.bloquear !== false;
+  await db.prepare("UPDATE usuarios SET bloqueado = ?, bloqueado_em = CASE WHEN ? = 1 THEN datetime('now') ELSE NULL END WHERE id = ?")
+    .run(bloquear ? 1 : 0, bloquear ? 1 : 0, c.id);
+  if (bloquear) {
+    // os agendamentos futuros dele saem da agenda
+    await db.prepare("UPDATE agendamentos SET status = 'cancelado' WHERE cliente_id = ? AND status = 'agendado' AND data >= ?")
+      .run(c.id, hojeISO());
+  }
+  res.json({ ok: true, bloqueado: bloquear });
+});
+
 
 export default router;

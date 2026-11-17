@@ -1,7 +1,7 @@
 import {
   get, post, $, el, brl, mascaraTelefone, mascaraCPF, aviso, limpaAviso,
   proximosDias, dataLonga, rodapeJhovis, hojeISO,
-  abrirModal, fecharModal, ligaModalFechamento, isoParaData,
+  abrirModal, fecharModal, ligaModalFechamento, isoParaData, janelaModal, sucesso,
 } from '/shared/app.js';
 import { registrarSW, botaoInstalar } from '/shared/pwa.js';
 
@@ -27,6 +27,8 @@ const estado = {
   hora: null,
   slots: [],
   carregandoSlots: false,
+  especial: null,       // data especial da data escolhida (exige antecipação)
+  comprovante: null,    // foto do comprovante enviada pelo cliente
   tela: 'login',
 };
 
@@ -609,8 +611,10 @@ async function carregarHorarios() {
   try {
     const r = await get(`/api/publico/empresa/${encodeURIComponent(slug)}/horarios?${params}`);
     estado.slots = r.slots || [];
+    estado.especial = r.especial || null;
   } catch {
     estado.slots = [];
+    estado.especial = null;
   } finally {
     estado.carregandoSlots = false;
   }
@@ -688,6 +692,8 @@ function telaAgendamento() {
 
 async function confirmar() {
   if (!estado.hora) return;
+  // Data especial: só finaliza depois do pagamento antecipado + comprovante.
+  if (estado.especial) return abrirModalPagamento();
   // ele já marcou serviços AGORA (bloco novo) e tem outros pendentes? avisa.
   const temPendentesOutroDia = estado.agendamentos.some(
     (a) => !(a.data === estado.data && String(a.hora).slice(0, 2) === estado.hora.slice(0, 2))
@@ -704,6 +710,7 @@ async function enviarAgendamento() {
       profissional_id: estado.profissional ? estado.profissional.id : estado.profissionais[0]?.id,
       data: estado.data,
       hora: estado.hora,
+      comprovante: estado.comprovante || null,
     });
     estado.ultimoBloco = r;
     estado.escolhidos = [];
@@ -716,6 +723,90 @@ async function enviarAgendamento() {
     telaAgendamento();
   }
 }
+
+/* ===================== data especial: pagar e enviar comprovante ===================== */
+function abrirModalPagamento() {
+  const esp = estado.especial;
+  const total = estado.escolhidos.reduce((t, s) => t + (s.preco_cent || 0), 0);
+  const valor = esp.modo === 'pct'
+    ? Math.round(total * (Number(esp.valor_pct) || 0) / 100)
+    : Number(esp.valor_cent) || 0;
+  const alerta = el('div', { class: 'alerta' });
+  const previa = el('img', { style: 'display:none;width:100%;max-height:220px;object-fit:contain;border-radius:12px;border:1px solid var(--borda);margin-top:8px' });
+  let comprovante = null;
+
+  const arquivo = el('input', { type: 'file', accept: 'image/*' });
+  arquivo.onchange = async () => {
+    const f = arquivo.files && arquivo.files[0];
+    if (!f) return;
+    try {
+      comprovante = await reduzirImagem(f, 1000, 0.82);
+      previa.src = comprovante;
+      previa.style.display = '';
+      limpaAviso(alerta);
+    } catch (e) {
+      aviso(alerta, 'erro', 'Não foi possível ler a imagem. Tente outra foto.');
+    }
+  };
+
+  const copiar = el('button', { class: 'btn btn-fantasma btn-mini', type: 'button' }, 'Copiar chave PIX');
+  copiar.onclick = async () => {
+    try { await navigator.clipboard.writeText(esp.chave_pix); sucesso('Chave PIX copiada.'); }
+    catch { aviso(alerta, 'erro', 'Copie manualmente: ' + esp.chave_pix); }
+  };
+
+  const corpo = el('div', {},
+    el('p', { class: 'modal-sub' }, `${dataLonga(estado.data)} é uma data especial: o horário só fica reservado após o pagamento antecipado.`),
+    el('div', { class: 'caixa-pagar' },
+      el('div', { class: 'mini muted' }, 'Valor antecipado'),
+      el('div', { style: 'font-weight:800;font-size:1.3rem' }, brl(valor)),
+      esp.chave_pix ? el('div', { class: 'mini', style: 'margin-top:6px' }, `PIX: ${esp.chave_pix}`) : null,
+      esp.chave_pix ? copiar : null,
+      esp.link_pagamento
+        ? el('a', { class: 'btn btn-fantasma btn-mini', href: esp.link_pagamento, target: '_blank', rel: 'noopener', style: 'margin-top:6px' }, 'Abrir link de pagamento')
+        : null,
+      esp.instrucoes ? el('div', { class: 'mini muted', style: 'margin-top:8px' }, esp.instrucoes) : null
+    ),
+    el('div', { class: 'campo', style: 'margin-top:12px' },
+      el('label', {}, 'Envie o comprovante'), arquivo, previa),
+    alerta,
+    el('button', { class: 'btn btn-bloco', type: 'button',
+      onclick: async (ev) => {
+        limpaAviso(alerta);
+        if (!comprovante) return aviso(alerta, 'erro', 'Anexe a foto do comprovante para reservar o horário.');
+        ev.currentTarget.disabled = true;
+        estado.comprovante = comprovante;
+        await enviarAgendamento();
+      } }, 'Enviar comprovante e reservar')
+  );
+
+  document.body.append(el('div', { class: 'modal-fundo', id: 'modalPagar' },
+    el('div', { class: 'modal' }, el('h3', {}, 'Pagamento antecipado'), corpo)));
+  janelaModal('modalPagar');
+}
+
+/** Reduz a foto do comprovante no próprio celular antes de enviar. */
+function reduzirImagem(arquivo, lado, qualidade) {
+  return new Promise((ok, nao) => {
+    const leitor = new FileReader();
+    leitor.onerror = () => nao(new Error('leitura'));
+    leitor.onload = () => {
+      const img = new Image();
+      img.onerror = () => nao(new Error('imagem'));
+      img.onload = () => {
+        const escala = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * escala);
+        c.height = Math.round(img.naturalHeight * escala);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        ok(c.toDataURL('image/jpeg', qualidade));
+      };
+      img.src = String(leitor.result);
+    };
+    leitor.readAsDataURL(arquivo);
+  });
+}
+
 
 /* ============================ tela final ============================ */
 function telaFinal() {

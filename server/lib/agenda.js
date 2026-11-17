@@ -58,7 +58,7 @@ export async function slotsDisponiveis({ empresa, data, duracaoMin = 30, profiss
 
   // O filtro por profissional é montado à parte: no Postgres um parâmetro em
   // "(? IS NULL OR …)" não tem tipo deduzível e a consulta falha.
-  const filtros = ['empresa_id = ?', 'data = ?', "status <> 'cancelado'"];
+  const filtros = ['empresa_id = ?', 'data = ?', "status <> 'cancelado'", "pagamento <> 'liberado'"];
   const args = [empresa.id, data];
   if (profissionalId) {
     filtros.push('profissional_id = ?');
@@ -108,7 +108,7 @@ export async function slotsParaBloco({ empresa, data, duracoes, profissionalId =
   }
   if (data < hojeISO(agora)) return [];
 
-  const filtros = ['empresa_id = ?', 'data = ?', "status <> 'cancelado'"];
+  const filtros = ['empresa_id = ?', 'data = ?', "status <> 'cancelado'", "pagamento <> 'liberado'"];
   const args = [empresa.id, data];
   if (profissionalId) {
     filtros.push('profissional_id = ?');
@@ -155,7 +155,8 @@ export async function haConflito({ empresaId, profissionalId, data, hora, duraca
   const lista = await db
     .prepare(
       `SELECT id, hora, duracao_min FROM agendamentos
-       WHERE empresa_id = ? AND profissional_id = ? AND data = ? AND status <> 'cancelado'`
+       WHERE empresa_id = ? AND profissional_id = ? AND data = ? AND status <> 'cancelado'
+         AND pagamento <> 'liberado'`
     )
     .all(empresaId, profissionalId, data);
   return lista.some((o) => {
@@ -192,4 +193,20 @@ export async function precoVigente(servico, empresaId, data = hojeISO()) {
 export function podeCancelar(data, hora, agora = new Date()) {
   const alvo = new Date(`${data}T${hora}:00`);
   return (alvo.getTime() - agora.getTime()) / 60000 > 15;
+}
+
+/* ===================== datas especiais (pagamento antecipado) ===================== */
+
+/** Data especial ativa da empresa naquela data (ou null). */
+export async function especialDaData(empresaId, data) {
+  return await db
+    .prepare('SELECT * FROM datas_especiais WHERE empresa_id = ? AND data = ? AND ativo = 1')
+    .get(empresaId, data);
+}
+
+/** Quanto o cliente paga antecipado por um serviço de `precoCent`. */
+export function valorAntecipado(especial, precoCent) {
+  if (!especial) return 0;
+  if (especial.modo === 'pct') return Math.max(0, Math.round(precoCent * (Number(especial.valor_pct) || 0) / 100));
+  return Math.max(0, Number(especial.valor_cent) || 0);
 }

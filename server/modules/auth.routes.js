@@ -5,6 +5,9 @@ import { hojeISO } from '../lib/agenda.js';
 
 const router = express.Router();
 
+/** Mensagem neutra para o cliente bloqueado (ele não sabe que foi bloqueado). */
+export const MENSAGEM_BLOQUEADO = 'Desculpe-nos, estamos sem vagas no momento, volte mais tarde!';
+
 const normTel = (v) => String(v || '').replace(/\D/g, '');
 const normCpf = (v) => String(v || '').replace(/\D/g, '');
 
@@ -42,6 +45,10 @@ router.post('/cliente/login', async (req, res) => {
 
   if (!u || !verificaSenha(senha, u.senha_hash)) {
     return res.status(401).json({ erro: 'Telefone/CPF ou senha incorretos.' });
+  }
+  // Cliente bloqueado pelo gestor: mensagem neutra, para não revelar o bloqueio.
+  if (u.bloqueado) {
+    return res.status(403).json({ erro: MENSAGEM_BLOQUEADO, bloqueado: true });
   }
   setCookie(res, await criaToken(u.id));
   res.json({ usuario: publico(u) });

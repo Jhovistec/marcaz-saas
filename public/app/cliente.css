@@ -313,3 +313,11 @@
 /* fim do deslize lateral: nada de carrossel no celular */
 .datas { flex-wrap: wrap; overflow: visible; }
 .data-chip { min-width: 0; flex: 1 1 62px; }
+
+/* ---- data especial: caixa de pagamento antecipado ---- */
+.caixa-pagar {
+  margin-top: 12px; padding: 12px; border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--prim) 55%, var(--borda));
+  background: color-mix(in srgb, var(--prim) 8%, transparent);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+}

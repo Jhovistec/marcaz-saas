@@ -10,6 +10,8 @@ import {
   precoVigente,
   haConflito,
   podeCancelar,
+  especialDaData,
+  valorAntecipado,
 } from '../lib/agenda.js';
 import { normalizaDiasAgenda, MAX_DIAS_AGENDA } from '../lib/janela.js';
 import { notificarNovoAgendamento } from '../lib/notificacoes.js';
@@ -69,7 +71,11 @@ router.get('/empresa/:slug', async (req, res) => {
     )
     .all(e.id, hoje, hoje);
 
-  res.json({ empresa: perfilEmpresa(e), servicos, profissionais, promocoes });
+  const especiais = await db
+    .prepare('SELECT id, data, titulo, modo, valor_cent, valor_pct, instrucoes FROM datas_especiais WHERE empresa_id = ? AND ativo = 1 AND data >= ? ORDER BY data')
+    .all(e.id, hoje);
+
+  res.json({ empresa: perfilEmpresa(e), servicos, profissionais, promocoes, datas_especiais: especiais });
 });
 
 router.get('/empresa/:slug/horarios', async (req, res) => {
@@ -100,8 +106,16 @@ router.get('/empresa/:slug/horarios', async (req, res) => {
         profissionalId: profissional_id ? Number(profissional_id) : null,
       });
 
+  const especial = await especialDaData(e.id, data);
   res.json({
     data,
+    exige_pagamento: !!especial,
+    especial: especial
+      ? { id: especial.id, titulo: especial.titulo, modo: especial.modo, valor_cent: especial.valor_cent,
+          valor_pct: especial.valor_pct, chave_pix: especial.chave_pix, link_pagamento: especial.link_pagamento,
+          instrucoes: especial.instrucoes,
+          valor_antecipado_cent: valorAntecipado(especial, servicos.reduce((t, x) => t + x.preco_cent, 0)) }
+      : null,
     slots: livres,
     duracao_total_min: servicos.reduce((a, b) => a + b.duracao_min, 0),
     servicos: servicos.length,
@@ -158,7 +172,11 @@ router.get('/me/atraso', exigeLogin, async (req, res) => {
 router.post('/agendamentos', exigeLogin, async (req, res) => {
   const u = req.usuario;
   if (u.papel !== 'cliente') return res.status(403).json({ erro: 'Rota do cliente.' });
-  const { servico_id, profissional_id, data, hora } = req.body || {};
+  const atual = await db.prepare('SELECT bloqueado FROM usuarios WHERE id = ?').get(u.id);
+  if (atual && atual.bloqueado) {
+    return res.status(403).json({ erro: 'Desculpe-nos, estamos sem vagas no momento, volte mais tarde!' });
+  }
+  const { servico_id, profissional_id, data, hora, comprovante } = req.body || {};
 
   const e = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(u.empresa_id);
   if (!e || e.status !== 'ativa') return res.status(403).json({ erro: 'Estabelecimento indisponível.' });
@@ -179,13 +197,25 @@ router.post('/agendamentos', exigeLogin, async (req, res) => {
   }
 
   const { preco_cent } = await precoVigente(serv, e.id, data);
+
+  // Data especial: exige comprovante e o horário fica reservado aguardando o ACEITO.
+  const especial = await especialDaData(e.id, data);
+  if (especial) {
+    if (!comprovante || !String(comprovante).startsWith('data:image/')) {
+      return res.status(400).json({ erro: 'Nesta data é preciso enviar o comprovante do pagamento antecipado.' });
+    }
+  }
+  const pagamento = especial ? 'aguardando' : 'nenhum';
+
   const info = await db
     .prepare(
       `INSERT INTO agendamentos
-       (empresa_id, cliente_id, profissional_id, servico_id, data, hora, duracao_min, preco_cent, criado_por)
-       VALUES (?,?,?,?,?,?,?,?,?)`
+       (empresa_id, cliente_id, profissional_id, servico_id, data, hora, duracao_min, preco_cent, criado_por,
+        pagamento, comprovante, data_especial_id)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
     )
-    .run(e.id, u.id, prof.id, serv.id, data, hora, serv.duracao_min, preco_cent, u.id);
+    .run(e.id, u.id, prof.id, serv.id, data, hora, serv.duracao_min, preco_cent, u.id,
+      pagamento, especial ? String(comprovante) : null, especial ? especial.id : null);
 
   await notificarNovoAgendamento({
     empresaId: e.id,
@@ -207,6 +237,8 @@ router.post('/agendamentos', exigeLogin, async (req, res) => {
       hora,
       preco_cent,
       duracao_min: serv.duracao_min,
+      pagamento,
+      aguardando_aceite: pagamento === 'aguardando',
     },
     empresa: perfilEmpresa(e),
   });
@@ -216,7 +248,11 @@ router.post('/agendamentos', exigeLogin, async (req, res) => {
 router.post('/agendamentos/bloco', exigeLogin, async (req, res) => {
   const u = req.usuario;
   if (u.papel !== 'cliente') return res.status(403).json({ erro: 'Rota do cliente.' });
-  const { servico_ids, profissional_id, data, hora } = req.body || {};
+  const atual = await db.prepare('SELECT bloqueado FROM usuarios WHERE id = ?').get(u.id);
+  if (atual && atual.bloqueado) {
+    return res.status(403).json({ erro: 'Desculpe-nos, estamos sem vagas no momento, volte mais tarde!' });
+  }
+  const { servico_ids, profissional_id, data, hora, comprovante } = req.body || {};
   const ids = Array.isArray(servico_ids) ? servico_ids.map(Number).filter(Boolean) : [];
   if (!ids.length) return res.status(400).json({ erro: 'Escolha ao menos um serviço.' });
   if (!data || !hora) return res.status(400).json({ erro: 'Escolha data e horário.' });
@@ -242,6 +278,12 @@ router.post('/agendamentos/bloco', exigeLogin, async (req, res) => {
     return res.status(409).json({ erro: 'Não há espaço para todos esses serviços neste horário. Escolha outro.' });
   }
 
+  const especial = await especialDaData(e.id, data);
+  if (especial && (!comprovante || !String(comprovante).startsWith('data:image/'))) {
+    return res.status(400).json({ erro: 'Nesta data é preciso enviar o comprovante do pagamento antecipado.' });
+  }
+  const pagamento = especial ? 'aguardando' : 'nenhum';
+
   const turnos = turnoDoBloco({ hora, duracoes });
   const grupo = `${u.id}-${Date.now().toString(36)}`;
   const itens = [];
@@ -254,10 +296,12 @@ router.post('/agendamentos/bloco', exigeLogin, async (req, res) => {
     const info = await db
       .prepare(
         `INSERT INTO agendamentos
-         (empresa_id, cliente_id, profissional_id, servico_id, data, hora, duracao_min, preco_cent, grupo, criado_por)
-         VALUES (?,?,?,?,?,?,?,?,?,?)`
+         (empresa_id, cliente_id, profissional_id, servico_id, data, hora, duracao_min, preco_cent, grupo, criado_por,
+          pagamento, comprovante, data_especial_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
       )
-      .run(e.id, u.id, prof.id, sv.id, data, turnos[i].inicio, sv.duracao_min, preco_cent, grupo, u.id);
+      .run(e.id, u.id, prof.id, sv.id, data, turnos[i].inicio, sv.duracao_min, preco_cent, grupo, u.id,
+        pagamento, especial ? String(comprovante) : null, especial ? especial.id : null);
     itens.push({
       id: info.lastInsertRowid,
       servico: sv.nome,
@@ -287,6 +331,8 @@ router.post('/agendamentos/bloco', exigeLogin, async (req, res) => {
     termino: turnos[turnos.length - 1].fim,
     duracao_total_min: duracoes.reduce((a, b) => a + b, 0),
     preco_total_cent: total_cent,
+    pagamento,
+    aguardando_aceite: pagamento === 'aguardando',
     itens,
     empresa: perfilEmpresa(e),
   });
