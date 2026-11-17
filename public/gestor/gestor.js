@@ -1613,6 +1613,45 @@ async function abaFinanceiro(alvo) {
   renderFinanceiro(alvo, r, campoDe.value, campoAte.value, { campoDe, campoAte, aplicar, pdf });
 }
 
+/** Botão "Assinatura": só abre 7 dias antes do vencimento do plano. */
+function cartaoAssinatura() {
+  const a = (S.contexto && S.contexto.assinatura) || null;
+  if (!a) return el('div');
+  // data completa dd/mm/aaaa, como o gestor pediu ("Seu plano vence em 99/99/99")
+  const venc = a.vence_em ? `${a.vence_em.slice(8, 10)}/${a.vence_em.slice(5, 7)}/${a.vence_em.slice(0, 4)}` : '—';
+  const dias = a.dias_restantes;
+  const legenda = dias > 0
+    ? `${dias} dia${dias === 1 ? '' : 's'} para vencer`
+    : dias === 0 ? 'vence hoje' : `vencido há ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}`;
+
+  const botao = a.ativo && a.link
+    ? el('a', { class: 'btn btn-bloco btn-assinatura', href: a.link, target: '_blank', rel: 'noopener' }, 'Assinatura')
+    : el('button', {
+        class: 'btn btn-bloco btn-assinatura', type: 'button', disabled: '',
+        title: a.link ? 'O botão abre 7 dias antes do vencimento.' : 'Fale com a Jhovis para liberar o pagamento.',
+      }, 'Assinatura');
+
+  return el('div', { class: 'card card-assinatura' },
+    el('div', { class: 'mini muted', style: 'text-align:center' }, `Seu plano vence em ${venc} · ${legenda}`),
+    botao,
+    a.ativo && !a.link
+      ? el('div', { class: 'mini muted', style: 'text-align:center;margin-top:6px' },
+          'O link de pagamento ainda não foi liberado pela Jhovis.')
+      : null,
+    !a.ativo
+      ? el('div', { class: 'mini muted', style: 'text-align:center;margin-top:6px' },
+          `O botão fica ativo a partir de ${(() => { const i = somarDias(a.vence_em, -7); return `${i.slice(8, 10)}/${i.slice(5, 7)}/${i.slice(0, 4)}`; })()}.`)
+      : null
+  );
+}
+
+function somarDias(iso, dias) {
+  const d = isoParaData(iso);
+  d.setDate(d.getDate() + dias);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+
 function renderFinanceiro(alvo, r, de, ate, controles) {
   const prim = GRAFICO.principal;
   const prim2 = GRAFICO.secundaria;
@@ -1669,6 +1708,7 @@ function renderFinanceiro(alvo, r, de, ate, controles) {
 
   alvo.append(
     filtro || el('div'),
+    cartaoAssinatura(),
     cartaoPrevisao,
     el('div', { class: 'grade-3', style: 'margin-bottom:14px' },
       kpi(brl(r.hoje.bruto), 'Faturamento hoje'),

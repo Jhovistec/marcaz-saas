@@ -56,6 +56,8 @@ const COLUNAS = `
   almoco_inicio TEXT DEFAULT '12:00',
   almoco_fim    TEXT DEFAULT '13:00',
   notif_gestor  INTEGER NOT NULL DEFAULT 1,
+  assinatura_link TEXT,        -- link de pagamento da assinatura (definido no Control)
+  renovado_em   TEXT,          -- data da última renovação aplicada pelo Master
   criado_em     TEXT NOT NULL DEFAULT {NOW}
 `;
 
@@ -192,6 +194,8 @@ const MIGRACOES = [
   ['empresas', 'almoco_inicio', "TEXT DEFAULT '12:00'"],
   ['empresas', 'almoco_fim', "TEXT DEFAULT '13:00'"],
   ['empresas', 'notif_gestor', 'INTEGER NOT NULL DEFAULT 1'],
+  ['empresas', 'assinatura_link', 'TEXT'],
+  ['empresas', 'renovado_em', 'TEXT'],
   ['usuarios', 'notif_ativa', 'INTEGER NOT NULL DEFAULT 1'],
   ['usuarios', 'nascimento', 'TEXT'],
   ['agendamentos', 'atraso_min', 'INTEGER NOT NULL DEFAULT 0'],

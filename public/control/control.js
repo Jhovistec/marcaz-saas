@@ -1,6 +1,6 @@
 import {
   get, post, put, patch, $, el, brl, mascaraTelefone, mascaraCNPJ, mascaraCPF, aviso, limpaAviso,
-  rodapeJhovis, abrirModal, fecharModal, ligaModalFechamento, sucesso, janelaModal,
+  rodapeJhovis, abrirModal, fecharModal, ligaModalFechamento, sucesso, janelaModal, dataCurta,
 } from '/shared/app.js';
 
 const app = $('#app');
@@ -110,8 +110,25 @@ async function abaEmpresas(alvo) {
       el('td', {}, String(e.equipe)),
       el('td', {}, `${e.mes_qtd} · ${brl(e.mes_bruto)}`),
       el('td', {}, el('span', { class: `tag ${e.status === 'ativa' ? 'on' : 'off'}` }, e.status === 'ativa' ? 'ATIVA' : 'BLOQUEADA')),
+      el('td', { class: 'muted mini' }, e.ativa_desde ? dataCurta(e.ativa_desde) : '—'),
+      el('td', { class: 'mini' },
+        e.ultima_renovacao ? dataCurta(e.ultima_renovacao) : el('span', { class: 'muted' }, 'nunca'),
+        el('div', { class: 'mini muted' }, `vence ${dataCurta(e.assinatura.vence_em)}`)
+      ),
       el('td', {},
         el('div', { class: 'btn-linha', style: 'justify-content:flex-end' },
+          el('button', {
+            class: 'btn btn-mini', type: 'button',
+            title: 'Aplicar a renovação de hoje',
+            onclick: async () => {
+              if (!confirm(`Confirmar a renovação de ${e.nome} hoje? O vencimento passa para ${dataCurta(e.assinatura.vence_em)}.`)) return;
+              try {
+                const r = await post(`/api/control/empresas/${e.id}/renovar`, {});
+                alert(`Renovado. Novo vencimento: ${dataCurta(r.vence_em)}.`);
+                telaPainel();
+              } catch (err) { alert(err.message); }
+            },
+          }, 'Renovado'),
           el('button', {
             class: 'btn btn-mini', type: 'button',
             onclick: () => modalEditarEmpresa(e.id),
@@ -159,7 +176,8 @@ async function abaEmpresas(alvo) {
         el('table', { class: 'tabela' },
           el('thead', {}, el('tr', {},
             el('th', {}, 'Empresa'), el('th', {}, 'Clientes'), el('th', {}, 'Equipe'),
-            el('th', {}, 'Mês'), el('th', {}, 'Status'), el('th', {}, 'Ações')
+            el('th', {}, 'Mês'), el('th', {}, 'Status'), el('th', {}, 'Ativa desde'),
+            el('th', {}, 'Última renovação'), el('th', {}, 'Ações')
           )),
           el('tbody', {}, linhas.length ? linhas : el('tr', {}, el('td', { colspan: '6' }, el('div', { class: 'bloco-vazio' }, el('span', { class: 'icone' }, '🏢'), 'Nenhuma empresa cadastrada.'))))
         )
@@ -285,6 +303,9 @@ async function modalEditarEmpresa(id) {
   );
   const plano = campo('Plano', emp.plano);
   const vence = campo('Assinatura vence em', (emp.vence_em || '').slice(0, 10), { type: 'date' });
+  const linkAssinatura = campo('Link de pagamento da assinatura', emp.assinatura_link, { placeholder: 'https://...' });
+  linkAssinatura.bloco.append(el('div', { class: 'ajuda' },
+    'Este link é o que abre no botão "Assinatura" do painel do gestor — o botão só fica ativo 7 dias antes do vencimento.'));
   const abertura = campo('Abertura', emp.aberto_hora, { type: 'time' });
   const fechamento = campo('Fechamento', emp.fecha_hora, { type: 'time' });
   const diasAgenda = campo('Dias de agendamento', String(emp.dias_agenda), { type: 'number', min: '3', max: '15', step: '1' });
@@ -319,6 +340,7 @@ async function modalEditarEmpresa(id) {
 
     el('div', { class: 'titulo-secao' }, 'Assinatura e funcionamento'),
     el('div', { class: 'linha-campos' }, plano.bloco, vence.bloco),
+    linkAssinatura.bloco,
     el('div', { class: 'linha-campos' }, abertura.bloco, fechamento.bloco),
     diasAgenda.bloco,
     el('div', { class: 'ajuda', style: 'margin:-6px 0 16px' },
@@ -343,6 +365,7 @@ async function modalEditarEmpresa(id) {
               slug: slug.input.value, logo_url: logo.input.value,
               instagram: instagram.input.value, whatsapp: whatsapp.input.value, facebook: facebook.input.value,
               tema: tema.value, status: status.value, plano: plano.input.value, vence_em: vence.input.value,
+              assinatura_link: linkAssinatura.input.value,
               aberto_hora: abertura.input.value, fecha_hora: fechamento.input.value,
               dias_agenda: Number(diasAgenda.input.value),
               dono_nome: donoNome.input.value, dono_telefone: donoTel.input.value,

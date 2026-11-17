@@ -336,3 +336,13 @@ img.marca-logo { object-fit: cover; background: var(--card); }
 @media (max-width: 460px) {
   .recorte-tela { width: 100% !important; height: auto !important; }
 }
+
+/* ---- botão Assinatura (financeiro) ---- */
+.card-assinatura {
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--prim) 38%, var(--borda));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--prim) 8%, var(--card)), var(--card));
+  margin-bottom: 14px;
+}
+.btn-assinatura { text-align: center; text-decoration: none; }
+.btn-assinatura[disabled] { opacity: 0.55; cursor: not-allowed; }
