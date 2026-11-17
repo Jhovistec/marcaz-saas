@@ -1,0 +1,20 @@
+
+/* ---- chamados ---- */
+.lista-chamados { display: flex; flex-direction: column; gap: 10px; }
+.card-chamado {
+  background: var(--card); border: 1px solid var(--borda);
+  border-radius: 14px; padding: 13px 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.card-chamado.aberto { border-color: color-mix(in srgb, var(--erro) 45%, var(--borda)); }
+.chamado-assunto { font-weight: 800; }
+.chamado-mensagem {
+  font-size: 0.86rem; color: var(--txt-2); white-space: pre-wrap;
+  background: color-mix(in srgb, var(--txt) 5%, transparent);
+  border-radius: 10px; padding: 9px 11px;
+}
+.chamado-resposta {
+  font-size: 0.86rem; border-left: 3px solid var(--ok);
+  padding-left: 10px; display: flex; flex-direction: column; gap: 3px;
+}
+.tag-plano { background: color-mix(in srgb, var(--prim) 20%, transparent); color: var(--prim); font-weight: 800; }

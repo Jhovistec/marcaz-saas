@@ -4,6 +4,7 @@ import { db } from '../db.js';
 import { exigeMaster, exigeIdNumerico, hashSenha } from '../auth.js';
 import { hojeISO } from '../lib/agenda.js';
 import { calcularAssinatura, mesmoDiaNoMes } from '../lib/assinatura.js';
+import { planoDe } from '../lib/planos.js';
 import { normalizaDiasAgenda } from '../lib/janela.js';
 
 const router = express.Router();
@@ -37,6 +38,8 @@ router.get('/empresas', async (req, res) => {
     e.link = `/${e.slug}`;
     // assinatura: vencimento no mesmo dia do cadastro/renovação + botão 7 dias antes
     e.assinatura = calcularAssinatura(e, hoje);
+    e.plano_nome = planoDe(e.plano).nome;
+    e.limite_clientes = planoDe(e.plano).max_clientes;
     e.ativa_desde = e.criado_em ? String(e.criado_em).slice(0, 10) : null;
     e.ultima_renovacao = e.renovado_em ? String(e.renovado_em).slice(0, 10) : null;
   }
@@ -265,5 +268,37 @@ router.put('/equipe/:id', exigeIdNumerico, async (req, res) => {
   );
   res.json({ ok: true });
 });
+
+/* ============================ chamados ============================ */
+
+router.get('/chamados', async (_req, res) => {
+  const lista = await db
+    .prepare(
+      `SELECT c.*, e.nome AS empresa_nome, e.slug AS empresa_slug
+       FROM chamados c JOIN empresas e ON e.id = c.empresa_id
+       ORDER BY CASE WHEN c.status = 'aberto' THEN 0 ELSE 1 END, c.id DESC`
+    )
+    .all();
+  res.json({ chamados: lista });
+});
+
+router.post('/chamados/:id/resolver', exigeIdNumerico, async (req, res) => {
+  const c = await db.prepare('SELECT * FROM chamados WHERE id = ?').get(req.params.id);
+  if (!c) return res.status(404).json({ erro: 'Chamado não encontrado.' });
+  const resposta = String((req.body && req.body.resposta) || '').trim();
+  if (resposta.length < 3) return res.status(400).json({ erro: 'Escreva a resposta do chamado.' });
+  await db
+    .prepare(`UPDATE chamados SET status = 'resolvido', resposta = ?, resolvido_em = ? WHERE id = ?`)
+    .run(resposta, hojeISO(), c.id);
+  res.json({ ok: true });
+});
+
+router.post('/chamados/:id/reabrir', exigeIdNumerico, async (req, res) => {
+  const c = await db.prepare('SELECT * FROM chamados WHERE id = ?').get(req.params.id);
+  if (!c) return res.status(404).json({ erro: 'Chamado não encontrado.' });
+  await db.prepare(`UPDATE chamados SET status = 'aberto', resolvido_em = NULL WHERE id = ?`).run(c.id);
+  res.json({ ok: true });
+});
+
 
 export default router;

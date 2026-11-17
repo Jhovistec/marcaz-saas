@@ -76,6 +76,10 @@ function telaPainel() {
               onclick: () => { S.aba = 'empresas'; telaPainel(); },
             }, '🏢 Empresas'),
             el('button', {
+              class: 'aba' + (S.aba === 'chamados' ? ' ativa' : ''), type: 'button',
+              onclick: () => { S.aba = 'chamados'; telaPainel(); },
+            }, '🎫 Chamados'),
+            el('button', {
               class: 'aba' + (S.aba === 'equipe' ? ' ativa' : ''), type: 'button',
               onclick: () => { S.aba = 'equipe'; telaPainel(); },
             }, '👤 Equipe Jhovis')
@@ -91,6 +95,7 @@ function telaPainel() {
   );
   const alvo = $('#conteudo');
   if (S.aba === 'empresas') abaEmpresas(alvo);
+  else if (S.aba === 'chamados') abaChamados(alvo);
   else abaEquipe(alvo);
 }
 
@@ -105,6 +110,10 @@ async function abaEmpresas(alvo) {
         el('div', { style: 'font-weight:700' }, e.nome),
         el('div', { class: 'mini muted' }, `${e.segmento} · /${e.slug}`),
         el('div', { class: 'mini muted' }, e.razao_social || '—')
+      ),
+      el('td', {},
+        el('span', { class: 'tag tag-plano' }, (e.plano_nome || e.plano || '—').toUpperCase()),
+        el('div', { class: 'mini muted' }, `${e.plano_ciclo === 'anual' ? 'anual' : 'mensal'} · ${e.clientes}/${e.limite_clientes || '∞'} clientes`)
       ),
       el('td', {}, String(e.clientes)),
       el('td', {}, String(e.equipe)),
@@ -175,11 +184,11 @@ async function abaEmpresas(alvo) {
       el('div', { class: 'tabela-wrap' },
         el('table', { class: 'tabela' },
           el('thead', {}, el('tr', {},
-            el('th', {}, 'Empresa'), el('th', {}, 'Clientes'), el('th', {}, 'Equipe'),
+            el('th', {}, 'Empresa'), el('th', {}, 'Plano'), el('th', {}, 'Clientes'), el('th', {}, 'Equipe'),
             el('th', {}, 'Mês'), el('th', {}, 'Status'), el('th', {}, 'Ativa desde'),
             el('th', {}, 'Última renovação'), el('th', {}, 'Ações')
           )),
-          el('tbody', {}, linhas.length ? linhas : el('tr', {}, el('td', { colspan: '6' }, el('div', { class: 'bloco-vazio' }, el('span', { class: 'icone' }, '🏢'), 'Nenhuma empresa cadastrada.'))))
+          el('tbody', {}, linhas.length ? linhas : el('tr', {}, el('td', { colspan: '9' }, el('div', { class: 'bloco-vazio' }, el('span', { class: 'icone' }, '🏢'), 'Nenhuma empresa cadastrada.'))))
         )
       )
     )
@@ -397,6 +406,93 @@ const PERMS = [
   ['licencas', 'Licenças'],
   ['financeiro', 'Financeiro'],
 ];
+
+/* ---------------- chamados ---------------- */
+async function abaChamados(alvo) {
+  let r;
+  try {
+    r = await get('/api/control/chamados');
+  } catch (e) {
+    alvo.append(el('div', { class: 'alerta erro' }, e.message));
+    return;
+  }
+  const abertos = r.chamados.filter((c) => c.status === 'aberto');
+  const fechados = r.chamados.filter((c) => c.status !== 'aberto');
+
+  const linha = (c) => el('div', { class: 'card-chamado' + (c.status === 'aberto' ? ' aberto' : '') },
+    el('div', { class: 'entre' },
+      el('div', {},
+        el('div', { class: 'chamado-assunto' }, c.assunto),
+        el('div', { class: 'mini muted' },
+          `${c.empresa_nome} · ${c.autor_nome || 'gestor'} · ${dataCurta(c.criado_em)}`)
+      ),
+      el('span', { class: 'selo ' + (c.status === 'aberto' ? 'selo-erro' : 'selo-ok') },
+        c.status === 'aberto' ? 'ABERTO' : 'RESOLVIDO')
+    ),
+    el('div', { class: 'chamado-mensagem' }, c.mensagem),
+    c.resposta ? el('div', { class: 'chamado-resposta' },
+      el('div', { class: 'mini muted' }, 'Resposta da Jhovis'),
+      el('div', {}, c.resposta)) : null,
+    c.status === 'aberto'
+      ? el('div', { class: 'btn-linha', style: 'margin-top:8px' },
+          el('button', { class: 'btn btn-mini', type: 'button', onclick: () => responderChamado(c) },
+            'Responder e fechar'))
+      : el('div', { class: 'mini muted', style: 'margin-top:6px' }, `Fechado em ${dataCurta(c.resolvido_em)}`)
+  );
+
+  alvo.append(
+    el('div', { class: 'card' },
+      el('div', { class: 'entre' },
+        el('div', { class: 'card-titulo', style: 'margin:0' }, '🎫 Chamados dos clientes'),
+        el('div', { class: 'mini muted' }, `${abertos.length} aberto(s) · ${fechados.length} resolvido(s)`)
+      )
+    ),
+    abertos.length
+      ? el('div', { class: 'lista-chamados' }, abertos.map(linha))
+      : el('div', { class: 'card' }, el('div', { class: 'mini muted' }, 'Nenhum chamado aberto agora.')),
+    fechados.length
+      ? el('div', { class: 'card' },
+          el('div', { class: 'card-titulo' }, 'Resolvidos'),
+          el('div', { class: 'lista-chamados' }, fechados.map(linha)))
+      : null
+  );
+}
+
+function responderChamado(c) {
+  const texto = el('textarea', { rows: '4', placeholder: 'O que foi feito para resolver?' });
+  const alerta = el('div', { class: 'alerta' });
+  janelaModal({
+    id: 'modalChamado',
+    titulo: `Chamado #${c.id} — ${c.empresa_nome}`,
+    corpo: el('div', {},
+      el('div', { class: 'mini muted' }, c.assunto),
+      el('div', { class: 'chamado-mensagem' }, c.mensagem),
+      el('div', { class: 'campo' }, el('label', {}, 'Resposta'), texto),
+      alerta
+    ),
+    acoes: (fechar) => [
+      el('button', { class: 'btn btn-fantasma', type: 'button', onclick: fechar }, 'Cancelar'),
+      el('button', {
+        class: 'btn', type: 'button',
+        onclick: async (ev) => {
+          limpaAviso(alerta);
+          if (texto.value.trim().length < 3) return aviso(alerta, 'erro', 'Escreva a resposta antes de fechar.');
+          ev.currentTarget.disabled = true;
+          try {
+            await post(`/api/control/chamados/${c.id}/resolver`, { resposta: texto.value.trim() });
+            fechar();
+            sucesso('Chamado fechado.');
+            telaPainel();
+          } catch (e) {
+            aviso(alerta, 'erro', e.message);
+            ev.currentTarget.disabled = false;
+          }
+        },
+      }, 'Fechar chamado'),
+    ],
+  });
+}
+
 
 async function abaEquipe(alvo) {
   const r = await get('/api/control/equipe');

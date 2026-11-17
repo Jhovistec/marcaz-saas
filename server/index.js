@@ -9,6 +9,7 @@ import authRoutes from './modules/auth.routes.js';
 import publicoRoutes from './modules/publico.routes.js';
 import gestorRoutes from './modules/gestor.routes.js';
 import controlRoutes from './modules/control.routes.js';
+import assinaturaRoutes from './modules/assinatura.routes.js';
 import { seed } from './seed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/publico', publicoRoutes);
 app.use('/api/gestor', gestorRoutes);
 app.use('/api/control', controlRoutes);
+app.use('/api/assinatura', assinaturaRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true, versao: '1.0.0', banco: db.tipo }));
 
 // Diagnóstico de ambiente: mostra quais variáveis chegaram, mascaradas.
@@ -83,6 +85,15 @@ app.get('/sw.js', (_req, res) => {
 app.get('/gestor', (_req, res) => res.sendFile(PUBLICO + '/gestor/index.html'));
 app.get('/control', (_req, res) => res.sendFile(PUBLICO + '/control/index.html'));
 
+// Páginas de assinatura: /assinar (vitrine), /assinar/{plano}/{mensal|anual}
+app.get('/assinar', (_req, res) => res.sendFile(PUBLICO + '/assinar/index.html'));
+app.get(['/assinar/:plano', '/assinar/:plano/:ciclo'], (req, res, next) => {
+  const reservados = ['api', 'gestor', 'control', 'assinar', 'shared', 'app'];
+  // /assinar/assinar.js e /assinar/assinar.css são arquivos, não planos
+  if (reservados.includes(req.params.plano) || req.params.plano.includes('.')) return next();
+  res.sendFile(PUBLICO + '/assinar/index.html');
+});
+
 app.use(express.static(PUBLICO, { extensions: ['html'] }));
 
 // Arquivos escondidos não são servidos pelo static: este é o vínculo que o
@@ -98,7 +109,7 @@ app.get('/.well-known/assetlinks.json', (_req, res) => {
 
 // PWA do cliente: /{slug} (uma página só, o slug vira o tenant)
 app.get('/:slug', (req, res, next) => {
-  const reservados = ['api', 'gestor', 'control', 'assets', 'shared', 'app'];
+  const reservados = ['api', 'gestor', 'control', 'assinar', 'assets', 'shared', 'app'];
   if (reservados.includes(req.params.slug)) return next();
   res.sendFile(path.join(PUBLICO, 'app', 'index.html'));
 });

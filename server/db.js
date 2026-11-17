@@ -58,6 +58,14 @@ const COLUNAS = `
   notif_gestor  INTEGER NOT NULL DEFAULT 1,
   assinatura_link TEXT,        -- link de pagamento da assinatura (definido no Control)
   renovado_em   TEXT,          -- data da última renovação aplicada pelo Master
+  plano_ciclo   TEXT NOT NULL DEFAULT 'mensal',  -- mensal | anual
+  ver_todos_agendamentos INTEGER NOT NULL DEFAULT 1, -- 0 = cada um vê só a própria agenda
+  financeiro_individual  INTEGER NOT NULL DEFAULT 0, -- 1 = cada profissional vê o próprio financeiro
+  cliente_fiel_ativo     INTEGER NOT NULL DEFAULT 0,
+  cliente_fiel_meta      INTEGER NOT NULL DEFAULT 10,   -- 5 a 15 serviços
+  cliente_fiel_premio    TEXT DEFAULT 'desconto',       -- desconto | gratis
+  cliente_fiel_valor_pct INTEGER NOT NULL DEFAULT 50,   -- % de desconto no prêmio
+  comissao_pct           INTEGER NOT NULL DEFAULT 0,    -- % de comissão padrão (plano Redes)
   criado_em     TEXT NOT NULL DEFAULT {NOW}
 `;
 
@@ -185,6 +193,20 @@ CREATE TABLE IF NOT EXISTS sessoes (
   usuario_id    INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
   expira_em     TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS chamados (
+  id            INTEGER PRIMARY KEY {PK},
+  empresa_id    INTEGER NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  usuario_id    INTEGER,
+  autor_nome    TEXT,
+  assunto       TEXT NOT NULL,
+  mensagem      TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'aberto',   -- aberto | resolvido
+  resposta      TEXT,
+  criado_em     TEXT NOT NULL DEFAULT {NOW},
+  resolvido_em  TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_chamados_empresa ON chamados(empresa_id);
 `.replace(/INTEGER PRIMARY KEY \{PK\}/g, `INTEGER ${pk}`).replace(/\{NOW\}/g, now);
 }
 
@@ -196,6 +218,15 @@ const MIGRACOES = [
   ['empresas', 'notif_gestor', 'INTEGER NOT NULL DEFAULT 1'],
   ['empresas', 'assinatura_link', 'TEXT'],
   ['empresas', 'renovado_em', 'TEXT'],
+  ['empresas', 'plano_ciclo', "TEXT NOT NULL DEFAULT 'mensal'"],
+  ['empresas', 'ver_todos_agendamentos', 'INTEGER NOT NULL DEFAULT 1'],
+  ['empresas', 'financeiro_individual', 'INTEGER NOT NULL DEFAULT 0'],
+  ['empresas', 'cliente_fiel_ativo', 'INTEGER NOT NULL DEFAULT 0'],
+  ['empresas', 'cliente_fiel_meta', 'INTEGER NOT NULL DEFAULT 10'],
+  ['empresas', 'cliente_fiel_premio', "TEXT DEFAULT 'desconto'"],
+  ['empresas', 'cliente_fiel_valor_pct', 'INTEGER NOT NULL DEFAULT 50'],
+  ['empresas', 'comissao_pct', 'INTEGER NOT NULL DEFAULT 0'],
+  ['usuarios', 'comissao_pct', 'INTEGER'],
   ['usuarios', 'notif_ativa', 'INTEGER NOT NULL DEFAULT 1'],
   ['usuarios', 'nascimento', 'TEXT'],
   ['agendamentos', 'atraso_min', 'INTEGER NOT NULL DEFAULT 0'],
