@@ -3,6 +3,7 @@ import express from 'express';
 import { db } from '../db.js';
 import { exigeMaster, exigeIdNumerico, hashSenha } from '../auth.js';
 import { hojeISO } from '../lib/agenda.js';
+import { calcularAssinatura, mesmoDiaNoMes } from '../lib/assinatura.js';
 import { normalizaDiasAgenda } from '../lib/janela.js';
 
 const router = express.Router();
@@ -34,6 +35,10 @@ router.get('/empresas', async (req, res) => {
       .prepare(`SELECT COUNT(*) AS n FROM usuarios WHERE empresa_id = ? AND papel='funcionario'`)
       .get(e.id).n;
     e.link = `/${e.slug}`;
+    // assinatura: vencimento no mesmo dia do cadastro/renovação + botão 7 dias antes
+    e.assinatura = calcularAssinatura(e, hoje);
+    e.ativa_desde = e.criado_em ? String(e.criado_em).slice(0, 10) : null;
+    e.ultima_renovacao = e.renovado_em ? String(e.renovado_em).slice(0, 10) : null;
   }
   const totais = {
     empresas: empresas.length,
@@ -130,7 +135,7 @@ router.put('/empresas/:id', exigeIdNumerico, async (req, res) => {
   await db.prepare(
     `UPDATE empresas SET slug = ?, nome = ?, razao_social = ?, cnpj = ?, segmento = ?, telefone = ?,
        endereco = ?, logo_url = ?, instagram = ?, whatsapp = ?, facebook = ?, tema = ?, status = ?,
-       plano = ?, vence_em = ?, aberto_hora = ?, fecha_hora = ?, dias_agenda = ?,
+       plano = ?, vence_em = ?, assinatura_link = ?, aberto_hora = ?, fecha_hora = ?, dias_agenda = ?,
        almoco_ativo = ?, notif_gestor = ?
      WHERE id = ?`
   ).run(
@@ -138,6 +143,7 @@ router.put('/empresas/:id', exigeIdNumerico, async (req, res) => {
     texto(b.telefone, e.telefone), texto(b.endereco, e.endereco), texto(b.logo_url, e.logo_url),
     texto(b.instagram, e.instagram), texto(b.whatsapp, e.whatsapp), texto(b.facebook, e.facebook),
     tema, status, texto(b.plano, e.plano) || e.plano, texto(b.vence_em, e.vence_em),
+    b.assinatura_link !== undefined ? (String(b.assinatura_link || '').trim() || null) : e.assinatura_link,
     hora(b.aberto_hora, e.aberto_hora), hora(b.fecha_hora, e.fecha_hora), diasAgenda,
     almocoAtivo, notifGestor, e.id
   );
@@ -178,6 +184,34 @@ router.patch('/empresas/:id/assinatura', exigeIdNumerico, async (req, res) => {
   );
   res.json({ ok: true });
 });
+
+/** Link de pagamento da assinatura (definido aqui no Control). */
+router.patch('/empresas/:id/link-assinatura', exigeIdNumerico, async (req, res) => {
+  const e = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(req.params.id);
+  if (!e) return res.status(404).json({ erro: 'Empresa não encontrada.' });
+  const bruto = String(req.body?.assinatura_link ?? '').trim();
+  if (bruto && !/^https?:\/\/\S+$/i.test(bruto)) {
+    return res.status(400).json({ erro: 'Informe um link completo, começando com https://' });
+  }
+  await db.prepare('UPDATE empresas SET assinatura_link = ? WHERE id = ?').run(bruto || null, e.id);
+  const atual = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(e.id);
+  res.json({ ok: true, assinatura_link: atual.assinatura_link, assinatura: calcularAssinatura(atual, hojeISO()) });
+});
+
+/** RENOVADO: aplica a renovação de hoje e empurra o vencimento um mês. */
+router.post('/empresas/:id/renovar', exigeIdNumerico, async (req, res) => {
+  const e = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(req.params.id);
+  if (!e) return res.status(404).json({ erro: 'Empresa não encontrada.' });
+  const hoje = hojeISO();
+  const atual = calcularAssinatura(e, hoje);
+  // vence no mesmo dia do mês seguinte, contado do vencimento atual (ou de hoje, se atrasado)
+  const base = atual.vence_em >= hoje ? atual.vence_em : hoje;
+  const proximo = mesmoDiaNoMes(base, 1);
+  await db.prepare('UPDATE empresas SET renovado_em = ?, vence_em = ? WHERE id = ?').run(hoje, proximo, e.id);
+  const depois = await db.prepare('SELECT * FROM empresas WHERE id = ?').get(e.id);
+  res.json({ ok: true, renovado_em: hoje, vence_em: proximo, assinatura: calcularAssinatura(depois, hoje) });
+});
+
 
 router.post('/empresas/:id/reset-senha', exigeIdNumerico, async (req, res) => {
   const { senha } = req.body || {};

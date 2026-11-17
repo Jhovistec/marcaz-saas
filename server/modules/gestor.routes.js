@@ -14,6 +14,7 @@ import {
 } from '../lib/agenda.js';
 import { normalizaDiasAgenda, MAX_DIAS_AGENDA } from '../lib/janela.js';
 import { criarNotificacao, notificarNovoAgendamento } from '../lib/notificacoes.js';
+import { calcularAssinatura } from '../lib/assinatura.js';
 
 const router = express.Router();
 router.use(exigeLogin);
@@ -43,6 +44,7 @@ router.get('/contexto', async (req, res) => {
       notif_ativa: req.usuario.notif_ativa !== 0,
     },
     empresa: { ...e, dias_agenda: normalizaDiasAgenda(e.dias_agenda) },
+    assinatura: calcularAssinatura(e, hojeISO()),
     hoje: hojeISO(),
     max_dias_agenda: MAX_DIAS_AGENDA,
   });
