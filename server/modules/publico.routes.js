@@ -143,9 +143,33 @@ router.get('/me', exigeLogin, async (req, res) => {
     )
     .get(u.id);
   const proximo = ags.find((a) => a.data >= hojeISO()) || ags[0] || null;
+
+  // Cliente Fiel: só existe quando o gestor habilitou o programa no plano dele.
+  let fiel = null;
+  const emp = await db.prepare('SELECT cliente_fiel_ativo, cliente_fiel_meta, cliente_fiel_premio, cliente_fiel_valor_pct FROM empresas WHERE id = ?').get(u.empresa_id);
+  if (emp && emp.cliente_fiel_ativo) {
+    const q = await db
+      .prepare(`SELECT COUNT(*) AS n FROM agendamentos WHERE cliente_id = ? AND empresa_id = ? AND status = 'concluido'`)
+      .get(u.id, u.empresa_id);
+    const feitos = Number(q.n) || 0;
+    const meta = Number(emp.cliente_fiel_meta) || 10;
+    const ciclo = feitos % meta;
+    fiel = {
+      ativo: true,
+      meta,
+      premio: emp.cliente_fiel_premio || 'desconto',
+      valor_pct: emp.cliente_fiel_valor_pct || 50,
+      feitos: ciclo === 0 && feitos > 0 ? meta : ciclo,
+      faltam: ciclo === 0 && feitos > 0 ? 0 : meta - ciclo,
+      total: feitos,
+      premios: Math.floor(feitos / meta),
+    };
+  }
+
   res.json({
     cliente: { id: u.id, nome: u.nome, telefone: u.telefone },
     agendamentos: ags,
+    fiel,
     ultima_visita: ultima ? ultima.data : null,
     atraso_min: proximo ? proximo.atraso_min : 0,
     proximo: proximo ? { id: proximo.id, data: proximo.data, hora: proximo.hora, servico: proximo.servico } : null,

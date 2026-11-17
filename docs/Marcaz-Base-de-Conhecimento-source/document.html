@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<!--
+  Edit this file and reprint it (pdf action "reprint") to change the document.
+
+  The <body> class list is the whole of its appearance:
+    report | editorial | memo   the look
+    dark                        light text on a dark page
+    bleed                       print to the page edge, no margins, no page
+                                numbers. REQUIRED with "dark": the page margins
+                                are painted by the printer, not by styles.css, so
+                                a dark page without "bleed" comes out framed in
+                                white.
+    large                       bigger type, for reading on a screen
+
+  styles.css beside this file is a copy: edit it freely, it affects only this
+  document. Section bodies are sanitized on render: scripts, styles and unknown
+  tags are stripped, so add content with the tags already used here.
+-->
+<head>
+<meta charset="utf-8" />
+<title>Marcaz — Base de conhecimento para IAs de vendas</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="report">
+<article class="doc">
+  <header class="cover">
+    <div class="eyebrow">Document</div>
+    <h1>Marcaz — Base de conhecimento para IAs de vendas</h1>
+    <p class="standfirst">Aplicativo de agendamento multi-tenant da Jhovis Tecnologia · www.marcaz.online · contato@jhovis.com.br</p>
+    <div class="meta"><span>17 November 2026</span></div>
+  </header>
+  <section>
+    <h2>O que é o Marcaz</h2>
+<p>O Marcaz é um <strong>aplicativo de agendamento online com painel de gestão</strong>, vendido por <strong>assinatura mensal por estabelecimento</strong> — não é franquia, não é por profissional. Cada empresa alugada ganha três coisas: um app para os clientes dela (PWA instalável no celular, com a marca e as cores dela), um painel de gestão para o dono e a equipe, e uma página pública com o link próprio do estabelecimento.</p>
+<p>Tudo roda na nuvem. O cliente final não instala nada pela loja: abre o link, instala em 2 toques e o ícone fica na tela inicial do celular. Funciona em Android, iPhone e computador.</p>
+<blockquote><p><strong>Uma frase de posicionamento:</strong> "O Marcaz é o app de agendamento que tem a cara do seu negócio — seu cliente marca sozinho 24 horas por dia e você vê tudo num painel só."</p></blockquote>
+<p>Este documento é material de treinamento interno da Jhovis Tecnologia: descreve o aplicativo de ponta a ponta — o que ele é, para quem é, cada tela, cada função, cada regra de negócio, os limites e o que ele <strong>não</strong> faz. Versão de referência: produção em <code>marcaz-saas-qjpm.vercel.app</code>, com domínio próprio <code>www.marcaz.online</code>. Produto da Jhovis Tecnologia (jhovis.com.br) · contato@jhovis.com.br · (34) 99115-7546.</p>
+  </section>
+  <section>
+    <h2>Para quem é — e para quem não é</h2>
+<table>
+<thead><tr><th>Segmento</th><th>Uso típico</th></tr></thead>
+<tbody>
+<tr><td><strong>Barbearia</strong></td><td>corte, barba, combos, fila do dia, cliente avulso no balcão</td></tr>
+<tr><td><strong>Salão de beleza</strong></td><td>vários serviços na mesma visita (corte + escova + unha), profissionais com agenda própria</td></tr>
+<tr><td><strong>Estúdio de estética</strong></td><td>procedimentos longos, intervalos de almoço, promoções por período</td></tr>
+</tbody>
+</table>
+<p>Serve para qualquer negócio de <strong>hora marcada com profissional</strong>: sobrancelha, unhas, massagem, tatuagem, veterinária, consultório, aula particular.</p>
+<p><strong>Não é para:</strong> restaurante com reserva de mesa, hotel, locação de equipamento, evento com ingresso. O Marcaz trabalha com <strong>hora, profissional e serviço</strong>.</p>
+  </section>
+  <section>
+    <h2>Arquitetura em uma página (para a IA entender o produto)</h2>
+<table>
+<thead><tr><th>Quem</th><th>Endereço</th><th>O que é</th></tr></thead>
+<tbody>
+<tr><td>Cliente final</td><td><code>marcaz.online/{empresa}</code></td><td>PWA: marca, cores, agendamento</td></tr>
+<tr><td>Gestor/equipe</td><td><code>marcaz.online/gestor</code></td><td>painel: agenda, financeiro, equipe</td></tr>
+<tr><td>Jhovis (você)</td><td><code>marcaz.online/control</code></td><td>Control: empresas, assinatura, renovação</td></tr>
+<tr><td>API Express</td><td>—</td><td>camada que atende as três entradas</td></tr>
+<tr><td>PostgreSQL (Supabase)</td><td>—</td><td>banco único, com <code>empresa_id</code> em cada registro</td></tr>
+</tbody>
+</table>
+<p>O caminho é sempre o mesmo: cliente, gestor e Control falam com a API Express, e a API fala com o PostgreSQL. Nenhuma das três entradas acessa o banco diretamente.</p>
+<ul>
+<li><strong>Multi-tenant:</strong> cada empresa é um "tenant". O banco é um só; cada registro carrega o <code>empresa_id</code>. Um estabelecimento nunca vê dado de outro.</li>
+<li><strong>Três sessões independentes em cookies separados:</strong> cliente/gestor (<code>marcaz_sessao</code>) e master (<code>marcaz_control</code>). Dá para estar logado no painel e no Control na mesma aba.</li>
+<li><strong>Banco duplo:</strong> SQLite em desenvolvimento, PostgreSQL em produção (o mesmo código).</li>
+<li><strong>PWA + Service Worker:</strong> abre sem internet, atualiza sozinho quando há rede.</li>
+</ul>
+  </section>
+  <section>
+    <h2>Domínio próprio — como ficam os links</h2>
+<p>O domínio <code>www.marcaz.online</code> aponta para a aplicação. Com ele, os links ficam assim:</p>
+<table>
+<thead><tr><th>Quem</th><th>Link</th></tr></thead>
+<tbody>
+<tr><td>Página de entrada (escolher/instalar)</td><td><code>https://www.marcaz.online</code></td></tr>
+<tr><td>App do cliente de uma empresa</td><td><code>https://www.marcaz.online/{slug}</code> — ex.: <code>/barbearia-noel</code></td></tr>
+<tr><td>Painel do gestor</td><td><code>https://www.marcaz.online/gestor</code></td></tr>
+<tr><td>Marcaz Control (só Jhovis)</td><td><code>https://www.marcaz.online/control</code></td></tr>
+<tr><td>Instalador Windows / APK</td><td><code>https://www.marcaz.online/downloads/...</code></td></tr>
+</tbody>
+</table>
+<p>O <code>{slug}</code> é o identificador curto da empresa, definido no cadastro (ex.: <code>salao-divas</code>, <code>studio-plena</code>, <code>staynlee-barbearia</code>). É ele que define <strong>de quem</strong> é o app: a mesma aplicação serve todas as empresas e o slug diz qual marca, catálogo e agenda carregar.</p>
+<p><strong>Subdomínio por empresa</strong> (<code>barbearia-noel.marcaz.online</code>) é possível: exige DNS com curinga (<code>*.marcaz.online</code>) e a aplicação resolvendo o tenant pelo endereço em vez do caminho. É uma evolução, não um requisito — o caminho <code>/{slug}</code> já entrega o mesmo resultado e é o formato que está no ar hoje.</p>
+  </section>
+  <section>
+    <h2>App do cliente (o que o cliente final vê e faz)</h2>
+<h3>Entrada e login</h3>
+<ul>
+<li>Abre com <strong>logo, nome, endereço e cores da empresa</strong> (não aparece a marca Marcaz como protagonista: o app é do estabelecimento).</li>
+<li>Login por <strong>telefone/WhatsApp ou CPF + senha</strong>, em abas agrupadas (<strong>Pessoal</strong>: telefone, CPF · <strong>Empresa</strong>: CNPJ, e-mail).</li>
+<li><strong>Cadastro</strong> em uma tela: nome, telefone, CPF, nascimento (opcional) e senha.</li>
+<li><strong>Olho da senha:</strong> ícone vetorial que alterna entre olho fechado com risco (senha oculta) e olho aberto (senha visível), na cor do texto do campo.</li>
+<li><strong>Instalação:</strong> botão "Instalar app" quando o navegador oferece; quando não oferece, aparece o guia passo a passo por navegador (Chrome, Edge, Samsung Internet, Firefox, Safari). No iPhone: Safari → Compartilhar → Adicionar à Tela de Início.</li>
+<li>Sessão de 7 dias; "Sair" no topo.</li>
+</ul>
+<h3>Agendar em 5 passos</h3>
+<ol>
+<li>Escolhe <strong>um ou vários serviços</strong> (a ordem escolhida é a ordem da agenda).</li>
+<li>Escolhe o <strong>profissional</strong> (ou deixa "qualquer um").</li>
+<li>Escolhe o <strong>dia</strong> (calendário com os próximos dias abertos).</li>
+<li>Escolhe o <strong>horário</strong> — só aparecem horários realmente livres.</li>
+<li>Confirma. Se já tiver outro agendamento em outro dia, o app avisa antes de duplicar.</li>
+</ol>
+<h3>Regras que o app aplica sozinho</h3>
+<ul>
+<li>Respeita <strong>dias de funcionamento</strong>, <strong>abertura/fechamento</strong> e <strong>intervalo entre horários</strong>.</li>
+<li>Respeita o <strong>almoço</strong> (nenhum horário é oferecido se cruzar a pausa).</li>
+<li><strong>Não oferece horário no passado</strong>; no dia de hoje, só a partir de agora (arredondado).</li>
+<li><strong>Não deixa dois clientes no mesmo horário</strong> com o mesmo profissional (checagem no servidor, não só na tela).</li>
+<li>Mostra o <strong>preço com promoção aplicada</strong>, quando houver.</li>
+</ul>
+<h3>Meus agendamentos e cancelamento</h3>
+<ul>
+<li>Lista dos próximos horários, com serviço, profissional, data, hora e valor.</li>
+<li><strong>Cancelar</strong> até 15 minutos antes; faltando 15 minutos ou menos, o app orienta falar no WhatsApp do estabelecimento.</li>
+<li>Cancelou uma visita com vários serviços? Cancela a visita inteira.</li>
+<li><strong>Aviso de atraso:</strong> se o profissional atrasou, o cliente vê o novo horário previsto.</li>
+</ul>
+<h3>Datas especiais (pagamento antecipado)</h3>
+<p>Para véspera de Natal, Dia das Mães, réveillon — datas em que o dono quer garantia:</p>
+<ul>
+<li>O app avisa que <strong>aquela data exige pagamento antecipado</strong>.</li>
+<li>Mostra o valor (fixo em R$ ou % do serviço), a <strong>chave PIX</strong> (com botão copiar) e/ou o <strong>link de pagamento</strong>.</li>
+<li>O cliente <strong>anexa a foto do comprovante</strong> e só então finaliza.</li>
+<li>O horário fica <strong>bloqueado para todos</strong> até o dono decidir — ninguém pega no lugar.</li>
+<li>O dono <strong>aceita</strong> (reserva oficial) ou <strong>libera</strong> (o horário volta a ficar livre).</li>
+</ul>
+<h3>Instalação e uso offline</h3>
+<ul>
+<li>Ícone próprio na tela inicial, abertura em tela cheia (sem barra de endereço).</li>
+<li>Service worker: interface abre mesmo sem internet; dados sempre vêm do servidor.</li>
+<li>Correções publicadas chegam ao celular na próxima abertura com rede (rede primeiro).</li>
+</ul>
+  </section>
+  <section>
+    <h2>Painel do gestor (abas, uma a uma)</h2>
+<h3>📅 Agenda</h3>
+<ul>
+<li>Visão do <strong>dia</strong> com seletor de data e chips dos próximos 7 dias.</li>
+<li><strong>Fila do dia:</strong> quem está sendo atendido agora e quem é o próximo.</li>
+<li><strong>KPIs do dia:</strong> quantidade de agendamentos e previsto em R$.</li>
+<li><strong>Serviços da mesma visita viram um cartão só</strong> (corte + barba às 14:00–15:00, com valor e duração somados).</li>
+<li><strong>Atualiza sozinha a cada 30 segundos.</strong></li>
+<li><strong>Cliente avulso:</strong> botão "+ Cliente avulso" para quem chega no balcão; entra como "Cliente AV - nome (quem cadastrou)".</li>
+<li><strong>Cliente finalizado?</strong> Sim → conclui (e conta no financeiro). Não → atraso de <strong>+10</strong> ou <strong>+15 min</strong>, que empurra o próximo e avisa o cliente seguinte.</li>
+<li><strong>Datas especiais no topo:</strong> cartão "⭐ Datas especiais — precisam da sua decisão" acima de tudo, com nome do cliente, data/hora, serviço, valor antecipado e <strong>📎 Ver comprovante</strong>. Botões <strong>✔ ACEITO</strong>, <strong>Liberar</strong> e, depois de liberar, <strong>↩ Desfazer</strong> (5 minutos).</li>
+</ul>
+<h3>✂️ Serviços</h3>
+<ul>
+<li>Cadastro com <strong>nome, descrição, duração (min) e preço</strong>.</li>
+<li>Ativar/desativar. Serviço com agendamento futuro é <strong>desativado, não excluído</strong> (protege o histórico).</li>
+<li>Preço em centavos no banco: nunca há erro de arredondamento.</li>
+</ul>
+<h3>🏷️ Promoções</h3>
+<ul>
+<li>Título, <strong>desconto de 1% a 90%</strong>, período (início e fim) e <strong>quais serviços</strong> entram.</li>
+<li>Sem escolher serviços, vale para todo o catálogo ativo.</li>
+<li>O cliente vê o preço promocional no app; o preço base nunca é alterado.</li>
+<li>Ligar/desligar e excluir a qualquer momento.</li>
+</ul>
+<h3>👥 Equipe</h3>
+<ul>
+<li>Cadastro de profissionais com <strong>nome, telefone, e-mail, cargo e senha</strong>.</li>
+<li><strong>Permissões por pessoa:</strong> agenda, serviços, equipe, horários, financeiro. O dono tem todas.</li>
+<li>Profissional com permissão de agenda vê <strong>só a própria agenda</strong>.</li>
+<li>Ativar/desativar acesso sem apagar o histórico.</li>
+<li>Só o dono cadastra e altera a equipe.</li>
+</ul>
+<h3>🙋 Clientes</h3>
+<ul>
+<li>Lista com <strong>quantos agendamentos, última visita, total gasto</strong> e classificação automática: <strong>Ativo</strong> (até 15 dias), <strong>Visto há pouco</strong> (até 30), <strong>Sumiu 30–60</strong>, <strong>Sumiu 60–90</strong>, <strong>Sumiu +90</strong>, <strong>Nunca veio</strong>.</li>
+<li><strong>Receita em risco:</strong> soma do que os sumidos já gastaram — argumento de retomada.</li>
+<li><strong>Botão WhatsApp</strong> em cada linha, com mensagem pronta ("Senti sua falta! Que tal agendar?").</li>
+<li><strong>Aniversariantes do mês</strong>, com seletor de mês e atalho de WhatsApp.</li>
+<li><strong>Bloquear / Desbloquear cliente:</strong> bloqueado, ele não agenda mais e, ao tentar entrar, recebe <strong>"Desculpe-nos, estamos sem vagas no momento, volte mais tarde!"</strong> — mensagem neutra, ele não descobre que foi bloqueado. Os agendamentos futuros dele são cancelados.</li>
+<li>Editar data de nascimento (usada nos aniversariantes).</li>
+</ul>
+<h3>⚙️ Configurações</h3>
+<ul>
+<li><strong>Identidade:</strong> nome, endereço, telefone, <strong>logomarca</strong>, Instagram, WhatsApp, Facebook.</li>
+<li><strong>Logomarca com recorte:</strong> ao escolher o arquivo abre um editor com <strong>caixa de seleção pontilhada</strong> — arrasta a caixa, redimensiona pelo canto, dá zoom, vê a <strong>prévia quadrada e a prévia redonda</strong> (como fica no ícone). Salva em 256×256, leve (5–15 KB).</li>
+<li><strong>Tema de cores:</strong> Dourado (barbearia), Rose (salão), Verde menta (estética), Ciano, Violeta — muda o app do cliente e o painel.</li>
+<li><strong>Funcionamento:</strong> abertura, fechamento, dias da semana, intervalo entre horários (15/20/30/45/60 min), <strong>almoço</strong> (ativar + início/fim).</li>
+<li><strong>Janela de agendamento:</strong> quantos dias à frente o cliente pode marcar (3 a 15).</li>
+<li><strong>Notificações do gestor</strong> ligadas/desligadas.</li>
+<li><strong>Link do cliente</strong> com botão copiar.</li>
+</ul>
+<h3>📊 Financeiro</h3>
+<ul>
+<li><strong>Botão Assinatura</strong> no topo, com "Seu plano vence em dd/mm/aaaa" em letra pequena; o botão é um <strong>hiperlink</strong> para o pagamento e <strong>só fica ativo 7 dias antes do vencimento</strong>.</li>
+<li><strong>Previsão do mês:</strong> realizado + agendado = previsto, com barra e comparação com o mês anterior.</li>
+<li><strong>KPIs:</strong> faturamento hoje, na semana e no período; ticket médio.</li>
+<li><strong>Filtro por período</strong> (de/até).</li>
+<li><strong>Gráficos:</strong> evolução diária, serviços mais vendidos, desempenho por profissional, horários de pico.</li>
+<li><strong>Relatório em PDF</strong> (imprimir/salvar) para o contador ou para o dono levar na reunião.</li>
+</ul>
+<h3>🔔 Avisos</h3>
+<ul>
+<li>Notificações de novo agendamento, atraso, pagamento confirmado e horário liberado.</li>
+<li>Marcar como lidas; ligar/desligar por usuário.</li>
+</ul>
+<h3>⭐ Datas especiais</h3>
+<ul>
+<li>Marca uma data e define: <strong>título</strong>, <strong>tipo de antecipação (R$ ou %)</strong>, <strong>valor</strong>, <strong>chave PIX</strong>, <strong>link de pagamento</strong> e uma observação para o cliente.</li>
+<li>Sem PIX nem link, o sistema recusa salvar (não há como cobrar).</li>
+<li>Lista das datas marcadas, com valor, PIX e botão remover.</li>
+<li>É a mesma data que aparece no app do cliente e no topo da agenda.</li>
+</ul>
+  </section>
+  <section>
+    <h2>Marcaz Control (painel da Jhovis)</h2>
+<p>Uso interno: o master administra a carteira de empresas.</p>
+<ul>
+<li><strong>Lista de empresas</strong> com clientes, equipe, movimento do mês (quantidade e R$), <strong>status</strong> (ATIVA/BLOQUEADA), <strong>Ativa desde</strong> e <strong>Última renovação</strong> (com o vencimento logo abaixo).</li>
+<li><strong>Cadastrar empresa:</strong> nome, razão social, CNPJ, segmento, telefone, endereço, dados do dono (nome, telefone, CPF, e-mail) e senha inicial. O <strong>link (slug)</strong> pode ser escolhido; se já existir, o sistema avisa e sugere outro.</li>
+<li><strong>Editar empresa:</strong> tudo do cadastro + tema, status, plano, vencimento, <strong>link de pagamento da assinatura</strong>, horários e janela de agenda.</li>
+<li><strong>Renovado:</strong> um clique grava a data de hoje na "Última renovação" e empurra o vencimento para o <strong>mesmo dia do mês seguinte</strong>. Não pagou? Usa <strong>Bloquear</strong>.</li>
+<li><strong>Bloquear/Ativar</strong>, <strong>Senha</strong> (redefine a senha do dono) e <strong>Abrir</strong> (vai para o app da empresa).</li>
+<li><strong>Equipe Jhovis:</strong> usuários internos com acesso ao Control.</li>
+<li><strong>Sessão separada:</strong> estar no Control não expulsa o gestor logado na mesma aba.</li>
+</ul>
+  </section>
+  <section>
+    <h2>Regras de negócio (a IA pode afirmar com segurança)</h2>
+<ol>
+<li><strong>Cobrança por estabelecimento</strong>, não por profissional e não por franquia.</li>
+<li><strong>Vencimento no mesmo dia do mês</strong> do cadastro/renovação; meses curtos ajustam (31 → 28/30).</li>
+<li><strong>Botão de pagamento abre 7 dias antes</strong> do vencimento e continua aberto depois.</li>
+<li><strong>Não existe overbooking:</strong> a checagem é feita no servidor, no momento de salvar.</li>
+<li><strong>Cancelamento do cliente</strong> até 15 minutos antes; depois disso, só pelo WhatsApp.</li>
+<li><strong>Data especial:</strong> sem comprovante não conclui; horário fica bloqueado até a decisão.</li>
+<li><strong>Bloqueio de cliente é invisível</strong> para ele (mensagem neutra).</li>
+<li><strong>Serviço com histórico não é apagado</strong>, é desativado.</li>
+<li><strong>Preços em centavos</strong> no banco.</li>
+<li><strong>Um cliente nunca vê dado de outra empresa</strong> (isolamento por <code>empresa_id</code>).</li>
+</ol>
+  </section>
+  <section>
+    <h2>Limites e o que o Marcaz não faz (para a IA não prometer demais)</h2>
+<ul>
+<li><strong>Não envia WhatsApp automaticamente.</strong> Gera o link pronto (<code>wa.me</code>) com a mensagem; o disparo automático depende de integração externa (Zernio/Meta), ainda não ativa.</li>
+<li><strong>Não tem maquininha nem gateway próprio.</strong> Recebe PIX/links que o próprio dono cadastra; o comprovante é foto enviada pelo cliente e conferida pelo dono.</li>
+<li><strong>Não tem app na App Store.</strong> No iPhone o caminho é PWA (Safari → Adicionar à Tela de Início). No Android há APK do painel e PWA do cliente.</li>
+<li><strong>Não faz controle de estoque, comissão por profissional, nota fiscal nem folha.</strong></li>
+<li><strong>Não faz reserva de mesa, hospedagem ou evento com ingresso.</strong></li>
+<li><strong>Não tem plano gratuito.</strong> Teste de 7 dias está previsto, ainda não publicado.</li>
+<li><strong>Não guarda cartão de crédito</strong> de ninguém.</li>
+</ul>
+  </section>
+  <section>
+    <h2>Segurança e privacidade</h2>
+<ul>
+<li>Senhas com <strong>hash</strong> (nunca em texto).</li>
+<li>Sessões por <strong>cookie HttpOnly</strong> com validade de 7 dias.</li>
+<li><strong>Isolamento por empresa</strong> em todas as consultas (RLS no banco).</li>
+<li><strong>Master separado</strong> do gestor, com cookie próprio.</li>
+<li>Dados no <strong>PostgreSQL gerenciado (Supabase)</strong>, região São Paulo.</li>
+<li>Logo e comprovante trafegam como imagem reduzida no próprio aparelho antes de subir.</li>
+</ul>
+  </section>
+  <section>
+    <h2>Instalação em cada aparelho (o que a IA orienta)</h2>
+<table>
+<thead><tr><th>Aparelho</th><th>Como instalar</th></tr></thead>
+<tbody>
+<tr><td><strong>Android (cliente)</strong></td><td>abre o link no Chrome → "Instalar app" (ou menu ⋮ → Instalar aplicativo)</td></tr>
+<tr><td><strong>Android (gestor)</strong></td><td>APK do painel ou o mesmo caminho do PWA em <code>/gestor</code></td></tr>
+<tr><td><strong>iPhone / iPad</strong></td><td><strong>Safari</strong> → Compartilhar (quadrado com seta) → Adicionar à Tela de Início</td></tr>
+<tr><td><strong>Computador (Windows)</strong></td><td>instalador <code>.exe</code> (abre o painel em janela própria)</td></tr>
+<tr><td><strong>Computador (navegador)</strong></td><td>ícone de instalar na barra de endereço (Chrome/Edge)</td></tr>
+</tbody>
+</table>
+<p>Depois de instalar: ícone na tela inicial, abre em tela cheia, sem barra de endereço.</p>
+  </section>
+  <section>
+    <h2>Preços de lançamento (referência comercial)</h2>
+<table>
+<thead><tr><th>Plano</th><th>Valor</th><th>Para quem</th></tr></thead>
+<tbody>
+<tr><td><strong>Essencial</strong></td><td>R$ 29,90/mês</td><td>um profissional, agenda + app do cliente</td></tr>
+<tr><td><strong>Profissional</strong></td><td>R$ 59,90/mês</td><td>equipe, permissões, financeiro completo, promoções</td></tr>
+<tr><td><strong>Rede</strong></td><td>sob consulta</td><td>várias unidades, painel consolidado</td></tr>
+</tbody>
+</table>
+<p>Comparativo de mercado: concorrentes como o Gendo cobram <strong>por profissional</strong> (R$ 39,90 a R$ 124,90). O Marcaz cobra <strong>por estabelecimento</strong> — com 4 profissionais, a diferença mensal passa de R$ 100.</p>
+  </section>
+  <section>
+    <h2>As 7 argumentações de venda (para treinar as IAs)</h2>
+<ol>
+<li><strong>É o app com a cara do negócio.</strong> Logo, nome e cores do estabelecimento. O cliente não baixa "mais um app": instala o app <em>daquela</em> barbearia.</li>
+<li><strong>O cliente marca sozinho, 24 horas por dia.</strong> Acabou o "chama no WhatsApp e espera resposta"; o horário livre aparece na hora, com preço e profissional.</li>
+<li><strong>Nunca mais dois clientes no mesmo horário.</strong> A trava é do sistema, não da memória de quem atende o telefone.</li>
+<li><strong>Cobra por estabelecimento, não por cabeça.</strong> Um preço só, com quantos profissionais quiser — o oposto do concorrente que cobra por profissional.</li>
+<li><strong>O dono enxerga o dinheiro.</strong> Previsão do mês, ticket médio, horário de pico, serviço que mais vende e relatório em PDF.</li>
+<li><strong>Traz o cliente de volta.</strong> Lista de sumidos com quanto já gastaram, aniversariantes do mês e WhatsApp com mensagem pronta em um clique.</li>
+<li><strong>Datas especiais com garantia.</strong> Em véspera de Natal ou Dia das Mães, o cliente paga antecipado, envia o comprovante e o horário fica reservado — ou o dono libera.</li>
+</ol>
+  </section>
+  <section>
+    <h2>Objeções e respostas prontas</h2>
+<table>
+<thead><tr><th>Objeção</th><th>Resposta</th></tr></thead>
+<tbody>
+<tr><td>"Meu cliente não vai usar aplicativo."</td><td>Não é aplicativo de loja: é um link. Abre no navegador, instala em 2 toques, fica um ícone na tela. Quem já usa WhatsApp usa isso.</td></tr>
+<tr><td>"Já uso caderno / agenda de papel."</td><td>O caderno não avisa o cliente do atraso, não mostra quanto vai faturar no mês e não impede dois clientes no mesmo horário.</td></tr>
+<tr><td>"É caro."</td><td>R$ 29,90 por mês é menos de R$ 1 por dia. Um horário perdido por semana já paga o plano. E é por estabelecimento, não por profissional.</td></tr>
+<tr><td>"Não tenho tempo de configurar."</td><td>A configuração é uma tela: nome, logo, serviços e horários. Em 10 minutos o link está no ar.</td></tr>
+<tr><td>"E se eu quiser parar?"</td><td>É mensal, sem fidelidade. Bloqueia ou cancela quando quiser; o histórico fica guardado.</td></tr>
+<tr><td>"Preciso de nota fiscal / comissão."</td><td>O Marcaz entrega agenda, clientes e financeiro. Comissão e nota ficam no seu contador — e o relatório em PDF ajuda.</td></tr>
+</tbody>
+</table>
+  </section>
+  <section>
+    <h2>Roteiro de demonstração em 10 minutos</h2>
+<ol>
+<li><strong>(1 min)</strong> Abre o app do cliente no celular do dono, com a logo dele já aplicada.</li>
+<li><strong>(2 min)</strong> Marca um horário na frente dele: serviço → profissional → dia → hora → confirmado.</li>
+<li><strong>(2 min)</strong> Abre o painel na agenda: o horário apareceu, com valor e cliente.</li>
+<li><strong>(2 min)</strong> Mostra a fila do dia, o "cliente finalizado?" e o atraso de +10 min.</li>
+<li><strong>(1 min)</strong> Abre o financeiro: previsão do mês e gráfico.</li>
+<li><strong>(1 min)</strong> Abre clientes: sumidos, receita em risco e aniversariantes.</li>
+<li><strong>(1 min)</strong> Mostra a data especial com comprovante e o botão ACEITO.</li>
+</ol>
+<blockquote><p>Fecha com: "Seu link é <code>marcaz.online/{seu-nome}</code>. Quer que eu deixe no ar hoje?"</p></blockquote>
+  </section>
+</article>
+</body>
+</html>

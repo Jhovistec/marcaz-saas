@@ -15,6 +15,7 @@ import {
 import { normalizaDiasAgenda, MAX_DIAS_AGENDA } from '../lib/janela.js';
 import { criarNotificacao, notificarNovoAgendamento } from '../lib/notificacoes.js';
 import { calcularAssinatura } from '../lib/assinatura.js';
+import { recursosDoPlano, limiteUsuarios, limiteClientes, planoDe } from '../lib/planos.js';
 
 const router = express.Router();
 router.use(exigeLogin);
@@ -45,6 +46,7 @@ router.get('/contexto', async (req, res) => {
     },
     empresa: { ...e, dias_agenda: normalizaDiasAgenda(e.dias_agenda) },
     assinatura: calcularAssinatura(e, hojeISO()),
+    plano: recursosDoPlano(e.plano),
     hoje: hojeISO(),
     max_dias_agenda: MAX_DIAS_AGENDA,
   });
@@ -55,7 +57,10 @@ router.get('/agenda', exigePermissao('agenda'), async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   const data = req.query.data || hojeISO();
-  const soMeus = req.usuario.papel === 'funcionario';
+  // Plano Profissional/Redes com "cada um vê só a própria agenda" desligado:
+  // o funcionário enxerga a agenda inteira.
+  const verTodos = e.ver_todos_agendamentos !== 0;
+  const soMeus = req.usuario.papel === 'funcionario' && !verTodos;
   const ags = await db
     .prepare(
       `SELECT a.*, s.nome AS servico, p.nome AS profissional, c.nome AS cliente, c.telefone AS cliente_telefone
@@ -147,7 +152,10 @@ router.get('/fila', exigePermissao('agenda'), async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   const data = req.query.data || hojeISO();
-  const soMeus = req.usuario.papel === 'funcionario';
+  // Plano Profissional/Redes com "cada um vê só a própria agenda" desligado:
+  // o funcionário enxerga a agenda inteira.
+  const verTodos = e.ver_todos_agendamentos !== 0;
+  const soMeus = req.usuario.papel === 'funcionario' && !verTodos;
 
   const lista = await db
     .prepare(
@@ -388,6 +396,25 @@ router.post('/equipe', exigePermissao('equipe'), async (req, res) => {
   const e = await empresaDoUsuario(req, res);
   if (!e) return;
   if (req.usuario.papel !== 'dono') return res.status(403).json({ erro: 'Só o dono cadastra a equipe.' });
+
+  // Limite de usuários do app vem do plano (Liberdade = 1, Profissional = 5).
+  // O dono ocupa uma vaga: sobram (limite - 1) para os funcionários.
+  const limitePlano = limiteUsuarios(e.plano);
+  const limite = limitePlano === null ? null : Math.max(0, limitePlano - 1);
+  if (limite !== null) {
+    const q = await db
+      .prepare(`SELECT COUNT(*) AS n FROM usuarios WHERE empresa_id = ? AND papel = 'funcionario' AND ativo = 1`)
+      .get(e.id);
+    if (Number(q.n) >= limite) {
+      return res.status(403).json({
+        erro: `O plano ${planoDe(e.plano).nome} permite ${limite === 1 ? '1 profissional' : limite + ' profissionais'} no app além de você. ` +
+          'Desative um acesso ou mude de plano para cadastrar outro.',
+        limite,
+        plano: planoDe(e.plano).id,
+      });
+    }
+  }
+
   const { nome, telefone, email, cargo, senha, permissoes } = req.body || {};
   if (!nome || String(nome).trim().length < 3) return res.status(400).json({ erro: 'Informe o nome do profissional.' });
   const tel = String(telefone || '').replace(/\D/g, '');
@@ -467,6 +494,31 @@ router.put('/empresa', exigePermissao('horarios'), async (req, res) => {
   const almocoFim = hora(b.almoco_fim, e.almoco_fim || '13:00');
   const notifGestor = b.notif_gestor !== undefined ? (b.notif_gestor ? 1 : 0) : e.notif_gestor;
 
+  // ---- funções que dependem do plano ----
+  const plano = planoDe(e.plano);
+  const pediu = (campo) => b[campo] !== undefined;
+  if ((pediu('cliente_fiel_ativo') && b.cliente_fiel_ativo) && !plano.cliente_fiel) {
+    return res.status(403).json({ erro: `O programa Cliente Fiel está no plano Profissional e no Redes. O plano atual é ${plano.nome}.` });
+  }
+  if ((pediu('financeiro_individual') && b.financeiro_individual) && !plano.financeiro_individual) {
+    return res.status(403).json({ erro: `O financeiro individual está no plano Profissional e no Redes. O plano atual é ${plano.nome}.` });
+  }
+  if ((pediu('ver_todos_agendamentos') && !b.ver_todos_agendamentos) && plano.max_usuarios_app === 1) {
+    return res.status(403).json({ erro: `O plano ${plano.nome} tem um único usuário no app.` });
+  }
+
+  const fielAtivo = pediu('cliente_fiel_ativo') ? (b.cliente_fiel_ativo ? 1 : 0) : e.cliente_fiel_ativo;
+  let fielMeta = b.cliente_fiel_meta !== undefined ? Number(b.cliente_fiel_meta) : e.cliente_fiel_meta;
+  if (!Number.isInteger(fielMeta) || fielMeta < 5 || fielMeta > 15) fielMeta = e.cliente_fiel_meta || 10;
+  const fielPremio = ['desconto', 'gratis'].includes(b.cliente_fiel_premio) ? b.cliente_fiel_premio : e.cliente_fiel_premio;
+  let fielPct = b.cliente_fiel_valor_pct !== undefined ? Number(b.cliente_fiel_valor_pct) : e.cliente_fiel_valor_pct;
+  if (!Number.isInteger(fielPct) || fielPct < 1 || fielPct > 100) fielPct = e.cliente_fiel_valor_pct || 50;
+  const verTodos = pediu('ver_todos_agendamentos') ? (b.ver_todos_agendamentos ? 1 : 0) : e.ver_todos_agendamentos;
+  const finIndividual = pediu('financeiro_individual') ? (b.financeiro_individual ? 1 : 0) : e.financeiro_individual;
+  const comissaoPct = plano.comissoes && b.comissao_pct !== undefined
+    ? Math.max(0, Math.min(100, Number(b.comissao_pct) || 0))
+    : e.comissao_pct;
+
   if (almocoAtivo && minutos(almocoInicio) >= minutos(almocoFim)) {
     return res.status(400).json({ erro: 'O início do almoço deve ser antes do fim.' });
   }
@@ -490,7 +542,9 @@ router.put('/empresa', exigePermissao('horarios'), async (req, res) => {
   await db.prepare(
     `UPDATE empresas SET nome = ?, endereco = ?, telefone = ?, logo_url = ?, instagram = ?, whatsapp = ?,
        facebook = ?, tema = ?, aberto_hora = ?, fecha_hora = ?, dias_semana = ?, intervalo_min = ?, dias_agenda = ?,
-       almoco_ativo = ?, almoco_inicio = ?, almoco_fim = ?, notif_gestor = ?
+       almoco_ativo = ?, almoco_inicio = ?, almoco_fim = ?, notif_gestor = ?,
+       cliente_fiel_ativo = ?, cliente_fiel_meta = ?, cliente_fiel_premio = ?, cliente_fiel_valor_pct = ?,
+       ver_todos_agendamentos = ?, financeiro_individual = ?, comissao_pct = ?
      WHERE id = ?`
   ).run(
     texto(b.nome, e.nome) || e.nome,
@@ -510,6 +564,8 @@ router.put('/empresa', exigePermissao('horarios'), async (req, res) => {
     almocoInicio,
     almocoFim,
     notifGestor,
+    fielAtivo, fielMeta, fielPremio, fielPct,
+    verTodos, finIndividual, comissaoPct,
     e.id
   );
   res.json({ ok: true, empresa: await db.prepare('SELECT * FROM empresas WHERE id = ?').get(e.id) });
@@ -928,6 +984,126 @@ router.post('/clientes/:id/bloquear', exigePermissao('agenda'), exigeIdNumerico,
       .run(c.id, hojeISO());
   }
   res.json({ ok: true, bloqueado: bloquear });
+});
+
+
+/* ============================ chamados ============================ */
+// O gestor abre um chamado e acompanha; o master responde e fecha.
+
+router.get('/chamados', async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const lista = await db
+    .prepare(
+      `SELECT id, assunto, mensagem, status, resposta, criado_em, resolvido_em
+       FROM chamados WHERE empresa_id = ?
+       ORDER BY CASE WHEN status = 'aberto' THEN 0 ELSE 1 END, id DESC`
+    )
+    .all(e.id);
+  res.json({ chamados: lista, suporte: planoDe(e.plano).suporte });
+});
+
+router.post('/chamados', async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  const { assunto, mensagem } = req.body || {};
+  if (!assunto || String(assunto).trim().length < 3) return res.status(400).json({ erro: 'Escreva um assunto para o chamado.' });
+  if (!mensagem || String(mensagem).trim().length < 10) return res.status(400).json({ erro: 'Descreva o problema com pelo menos 10 caracteres.' });
+  const info = await db
+    .prepare(`INSERT INTO chamados (empresa_id, usuario_id, autor_nome, assunto, mensagem) VALUES (?,?,?,?,?)`)
+    .run(e.id, req.usuario.id, req.usuario.nome, String(assunto).trim(), String(mensagem).trim());
+  res.status(201).json({ id: info.lastInsertRowid, ok: true });
+});
+
+/* ============================ cliente fiel ============================ */
+// Conta os serviços já concluídos do cliente. Quando bate a meta, o prêmio
+// fica disponível e o cliente vê o progresso no app.
+
+router.get('/clientes-fieis', exigePermissao('clientes'), async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  if (!planoDe(e.plano).cliente_fiel) return res.json({ ativo: false, meta: 0, clientes: [] });
+  const meta = e.cliente_fiel_meta || 10;
+  const linhas = await db
+    .prepare(
+      `SELECT c.id, c.nome, c.telefone,
+              COUNT(a.id) AS servicos,
+              MAX(a.data) AS ultima
+       FROM usuarios c
+       LEFT JOIN agendamentos a ON a.cliente_id = c.id AND a.status = 'concluido'
+       WHERE c.empresa_id = ? AND c.papel = 'cliente'
+       GROUP BY c.id, c.nome, c.telefone
+       HAVING COUNT(a.id) > 0
+       ORDER BY COUNT(a.id) DESC`
+    )
+    .all(e.id);
+  res.json({
+    ativo: e.cliente_fiel_ativo !== 0,
+    meta,
+    premio: e.cliente_fiel_premio,
+    valor_pct: e.cliente_fiel_valor_pct,
+    clientes: linhas.map((l) => ({
+      id: l.id,
+      nome: l.nome,
+      telefone: l.telefone,
+      servicos: Number(l.servicos),
+      ultima: l.ultima,
+      faltam: Math.max(0, meta - (Number(l.servicos) % meta || (Number(l.servicos) >= meta ? 0 : meta))),
+      premios: Math.floor(Number(l.servicos) / meta),
+    })),
+  });
+});
+
+/* ============================ comissões (Redes) ============================ */
+
+router.get('/comissoes', exigePermissao('financeiro'), async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  if (!planoDe(e.plano).comissoes) return res.json({ disponivel: false, profissionais: [] });
+  const de = req.query.de || hojeISO().slice(0, 8) + '01';
+  const ate = req.query.ate || hojeISO();
+  const linhas = await db
+    .prepare(
+      `SELECT p.id, p.nome, p.comissao_pct,
+              COUNT(a.id) AS qtd,
+              COALESCE(SUM(CASE WHEN a.status = 'concluido' THEN s.preco_cent ELSE 0 END), 0) AS bruto
+       FROM usuarios p
+       LEFT JOIN agendamentos a ON a.profissional_id = p.id AND a.data BETWEEN ? AND ?
+       LEFT JOIN servicos s ON s.id = a.servico_id
+       WHERE p.empresa_id = ? AND p.papel IN ('dono','funcionario')
+       GROUP BY p.id, p.nome, p.comissao_pct
+       ORDER BY bruto DESC`
+    )
+    .all(de, ate, e.id);
+  const padrao = e.comissao_pct || 0;
+  res.json({
+    disponivel: true,
+    de,
+    ate,
+    comissao_padrao_pct: padrao,
+    profissionais: linhas.map((l) => {
+      const pct = l.comissao_pct === null || l.comissao_pct === undefined ? padrao : Number(l.comissao_pct);
+      const bruto = Number(l.bruto);
+      return { id: l.id, nome: l.nome, pct, qtd: Number(l.qtd), bruto, comissao: Math.round((bruto * pct) / 100) };
+    }),
+  });
+});
+
+router.patch('/comissoes/:id', exigePermissao('financeiro'), exigeIdNumerico, async (req, res) => {
+  const e = await empresaDoUsuario(req, res);
+  if (!e) return;
+  if (!planoDe(e.plano).comissoes) return res.status(403).json({ erro: 'A gestão de comissões está no plano Redes.' });
+  const pct = req.body && req.body.comissao_pct;
+  if (pct !== null && pct !== undefined && (Number(pct) < 0 || Number(pct) > 100)) {
+    return res.status(400).json({ erro: 'A comissão deve ficar entre 0 e 100%.' });
+  }
+  const u = await db
+    .prepare(`SELECT id FROM usuarios WHERE id = ? AND empresa_id = ? AND papel IN ('dono','funcionario')`)
+    .get(req.params.id, e.id);
+  if (!u) return res.status(404).json({ erro: 'Profissional não encontrado.' });
+  await db.prepare('UPDATE usuarios SET comissao_pct = ? WHERE id = ?')
+    .run(pct === null || pct === undefined || pct === '' ? null : Math.round(Number(pct)), u.id);
+  res.json({ ok: true });
 });
 
 

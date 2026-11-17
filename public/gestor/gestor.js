@@ -435,6 +435,7 @@ const ABAS = [
   ['financeiro', '📊 Financeiro', 'financeiro'],
   ['avisos', '🔔 Avisos', 'agenda'],
   ['especiais', '⭐ Datas especiais', 'agenda'],
+  ['suporte', '🎫 Suporte', 'agenda'],
 ];
 
 function telaPainel() {
@@ -497,11 +498,88 @@ function telaPainel() {
   cuidarTimerDaAgenda();
 }
 
+/* ---------------- suporte / chamados ---------------- */
+async function abaSuporte(alvo) {
+  const plano = S.contexto.plano || {};
+  const r = await get('/api/gestor/chamados');
+  const abertos = r.chamados.filter((c) => c.status === 'aberto');
+  const fechados = r.chamados.filter((c) => c.status !== 'aberto');
+
+  const assunto = el('input', { placeholder: 'Resumo do problema' });
+  const mensagem = el('textarea', { rows: '4', placeholder: 'Conte o que está acontecendo, com o máximo de detalhe.' });
+  const alerta = el('div', { class: 'alerta' });
+
+  const form = el('div', { class: 'card' },
+    el('div', { class: 'card-titulo' }, 'Abrir um chamado'),
+    el('div', { class: 'campo' }, el('label', {}, 'Assunto'), assunto),
+    el('div', { class: 'campo' }, el('label', {}, 'Descrição'), mensagem),
+    alerta,
+    el('button', {
+      class: 'btn btn-bloco', type: 'button',
+      onclick: async (ev) => {
+        limpaAviso(alerta);
+        ev.currentTarget.disabled = true;
+        try {
+          await post('/api/gestor/chamados', { assunto: assunto.value, mensagem: mensagem.value });
+          sucesso('Chamado enviado. A Jhovis responde por aqui.');
+          telaPainel();
+        } catch (e) {
+          aviso(alerta, 'erro', e.message);
+          ev.currentTarget.disabled = false;
+        }
+      },
+    }, 'Enviar chamado')
+  );
+
+  const cartaoChat = plano.suporte === 'chat'
+    ? el('a', {
+        class: 'btn btn-bloco btn-chat', target: '_blank', rel: 'noopener',
+        href: 'https://api.whatsapp.com/send?phone=5538991410360&text=Ol%C3%A1+suporte%2C+estou+com+problema+no+aplicativo+Marcaz%2C+poderia+me+auxiliar%3F',
+      }, '💬 Suporte Chat')
+    : null;
+
+  const linha = (c) => el('div', { class: 'card-chamado' + (c.status === 'aberto' ? ' aberto' : '') },
+    el('div', { class: 'entre' },
+      el('div', {},
+        el('div', { class: 'chamado-assunto' }, c.assunto),
+        el('div', { class: 'mini muted' }, `#${c.id} · ${dataCurta(c.criado_em)}`)),
+      el('span', { class: 'selo ' + (c.status === 'aberto' ? 'selo-erro' : 'selo-ok') },
+        c.status === 'aberto' ? 'ABERTO' : 'RESOLVIDO')
+    ),
+    el('div', { class: 'chamado-mensagem' }, c.mensagem),
+    c.resposta ? el('div', { class: 'chamado-resposta' },
+      el('div', { class: 'mini muted' }, 'Resposta da Jhovis'),
+      el('div', {}, c.resposta),
+      c.resolvido_em ? el('div', { class: 'mini muted' }, `fechado em ${dataCurta(c.resolvido_em)}`) : null) : null
+  );
+
+  alvo.append(
+    el('div', { class: 'card' },
+      el('div', { class: 'card-titulo' }, '🎫 Suporte'),
+      el('div', { class: 'mini muted' },
+        plano.suporte === 'chat'
+          ? 'Você tem chat direto no WhatsApp e chamado pelo painel.'
+          : 'Seu plano tem suporte por chamado: escreva aqui e a Jhovis responde nesta tela.'),
+      cartaoChat ? el('div', { style: 'margin-top:10px' }, cartaoChat) : null
+    ),
+    form,
+    abertos.length
+      ? el('div', { class: 'card' }, el('div', { class: 'card-titulo' }, 'Chamados abertos'),
+          el('div', { class: 'lista-chamados' }, abertos.map(linha)))
+      : null,
+    fechados.length
+      ? el('div', { class: 'card' }, el('div', { class: 'card-titulo' }, 'Chamados resolvidos'),
+          el('div', { class: 'lista-chamados' }, fechados.map(linha)))
+      : null
+  );
+}
+
+
 function desenharAba(alvo) {
   const render = {
     agenda: abaAgenda, servicos: abaServicos, promocoes: abaPromocoes, equipe: abaEquipe,
     clientes: abaClientes, horarios: abaHorarios, financeiro: abaFinanceiro, avisos: abaAvisos,
-    especiais: abaEspeciais,
+    especiais: abaEspeciais, suporte: abaSuporte,
   }[S.aba];
   // se a sessão caiu no servidor, volta ao login com aviso (sem botão morto)
   Promise.resolve(render(alvo)).catch((e) => { if (!trataSessao(e)) console.error(e); });
@@ -1063,6 +1141,21 @@ async function abaEquipe(alvo) {
   );
   const alerta = el('div', { class: 'alerta' });
 
+  // Liberdade: um único usuário no app. O formulário de equipe não aparece.
+  const planoEquipe = S.contexto.plano || {};
+  if (planoEquipe.max_usuarios_app === 1) {
+    alvo.append(
+      el('div', { class: 'card' },
+        el('div', { class: 'card-titulo' }, '👥 Equipe'),
+        el('div', { class: 'mini muted' },
+          'O plano Liberdade tem um único usuário no app: você. Para dar acesso à equipe, mude para o plano Profissional.'),
+        el('a', { class: 'btn btn-bloco', href: '/assinar/profissional/mensal', target: '_blank', rel: 'noopener', style: 'margin-top:10px' },
+          'Ver o plano Profissional')
+      )
+    );
+    return;
+  }
+
   const form = el('div', { class: 'card' },
     el('div', { class: 'card-titulo' }, 'Cadastrar profissional'),
     el('div', { class: 'linha-campos' },
@@ -1355,6 +1448,47 @@ async function abaHorarios(alvo) {
   );
   const alerta = el('div', { class: 'alerta' });
 
+  // ---- funções do plano ----
+  const plano = S.contexto.plano || {};
+  const caixaVerTodos = el('input', { type: 'checkbox', checked: e.ver_todos_agendamentos ? '' : null });
+  const caixaFinInd = el('input', { type: 'checkbox', checked: e.financeiro_individual ? '' : null });
+  const caixaFiel = el('input', { type: 'checkbox', checked: e.cliente_fiel_ativo ? '' : null });
+  const fielMeta = el('select', {}, Array.from({ length: 11 }, (_, i) => i + 5)
+    .map((v) => el('option', { value: v, selected: v === (e.cliente_fiel_meta || 10) ? '' : null }, `${v} serviços`)));
+  const fielPremio = el('select', {},
+    [['desconto', 'Desconto no próximo serviço'], ['gratis', 'Serviço grátis']]
+      .map(([v, r]) => el('option', { value: v, selected: v === (e.cliente_fiel_premio || 'desconto') ? '' : null }, r)));
+  const fielPct = el('input', { type: 'number', min: '1', max: '100', step: '5', value: e.cliente_fiel_valor_pct || 50 });
+  const blocoFiel = el('div', { class: `linha-campos${e.cliente_fiel_ativo ? '' : ' escondido'}`, id: 'camposFiel' },
+    el('div', { class: 'campo' }, el('label', {}, 'Prêmio a cada'), fielMeta),
+    el('div', { class: 'campo' }, el('label', {}, 'Premiação'), fielPremio),
+    el('div', { class: 'campo' }, el('label', {}, 'Desconto (%)'), fielPct)
+  );
+  caixaFiel.addEventListener('change', () => {
+    document.getElementById('camposFiel').classList.toggle('escondido', !caixaFiel.checked);
+  });
+
+  const blocoPlano = el('div', { class: 'card' },
+    el('div', { class: 'card-titulo' }, `Funções do plano ${plano.nome || ''}`),
+    plano.max_usuarios_app === 1
+      ? el('div', { class: 'ajuda' }, 'O plano Liberdade tem um único usuário no app: você. Para dar acesso à equipe, mude para o Profissional.')
+      : el('label', { class: 'check' }, caixaVerTodos,
+          'Todos os profissionais veem a agenda de todos (desmarcado, cada um vê só a própria)'),
+    plano.financeiro_individual
+      ? el('label', { class: 'check' }, caixaFinInd,
+          'Cada profissional vê o próprio controle financeiro (desmarcado, só você vê)')
+      : null,
+    plano.cliente_fiel
+      ? el('div', {},
+          el('label', { class: 'check' }, caixaFiel, 'Programa Cliente Fiel'),
+          blocoFiel,
+          el('div', { class: 'ajuda' }, 'O cliente vê no app quantos serviços faltam para o prêmio.'))
+      : null,
+    plano.comissoes
+      ? el('div', { class: 'ajuda' }, 'A gestão de comissões está na aba Financeiro.')
+      : null
+  );
+
   const form = el('div', { class: 'card' },
     el('div', { class: 'card-titulo' }, 'Identidade do estabelecimento'),
     nome.bloco,
@@ -1403,6 +1537,12 @@ async function abaHorarios(alvo) {
             almoco_inicio: almocoInicio.value,
             almoco_fim: almocoFim.value,
             notif_gestor: caixaNotif.checked,
+            ver_todos_agendamentos: caixaVerTodos.checked,
+            financeiro_individual: caixaFinInd.checked,
+            cliente_fiel_ativo: caixaFiel.checked,
+            cliente_fiel_meta: Number(fielMeta.value),
+            cliente_fiel_premio: fielPremio.value,
+            cliente_fiel_valor_pct: Number(fielPct.value),
           });
           S.contexto = await get('/api/gestor/contexto');
           document.documentElement.dataset.tema = S.contexto.empresa.tema;
@@ -1417,7 +1557,7 @@ async function abaHorarios(alvo) {
     }, 'Salvar configurações')
   );
 
-  alvo.append(cartaoLinkCliente(), form);
+  alvo.append(cartaoLinkCliente(), form, blocoPlano);
 }
 
 /** Mostra o link que o cliente usa para agendar, com botão de copiar. */
@@ -1652,6 +1792,62 @@ function somarDias(iso, dias) {
 }
 
 
+/** Comissões — só no plano Redes. Preenche depois de montar a tela. */
+function cartaoComissoes() {
+  const plano = (S.contexto && S.contexto.plano) || {};
+  if (!plano.comissoes) return el('div');
+  const caixa = el('div', { class: 'card', id: 'cardComissoes' },
+    el('div', { class: 'card-titulo' }, '💼 Comissões'),
+    el('div', { class: 'mini muted' }, 'Carregando…'));
+  setTimeout(preencherComissoes, 0);
+  return caixa;
+}
+
+async function preencherComissoes() {
+  const caixa = document.getElementById('cardComissoes');
+  if (!caixa) return;
+  let r;
+  try {
+    r = await get('/api/gestor/comissoes');
+  } catch {
+    caixa.replaceChildren(el('div', { class: 'card-titulo' }, '💼 Comissões'),
+      el('div', { class: 'mini muted' }, 'Não foi possível carregar as comissões.'));
+    return;
+  }
+  if (!r.disponivel) return;
+  const total = r.profissionais.reduce((s2, p) => s2 + p.comissao, 0);
+  caixa.replaceChildren(
+    el('div', { class: 'entre' },
+      el('div', { class: 'card-titulo', style: 'margin:0' }, '💼 Comissões'),
+      el('div', { class: 'mini muted' }, `${dataCurta(r.de)} a ${dataCurta(r.ate)} · total ${brl(total)}`)),
+    el('div', { class: 'tabela-wrap', style: 'margin-top:10px' },
+      el('table', { class: 'tabela' },
+        el('thead', {}, el('tr', {},
+          el('th', {}, 'Profissional'), el('th', {}, 'Atendimentos'),
+          el('th', {}, 'Faturado'), el('th', {}, '%'), el('th', {}, 'Comissão'))),
+        el('tbody', {}, r.profissionais.map((p) => el('tr', {},
+          el('td', { style: 'font-weight:700' }, p.nome),
+          el('td', {}, String(p.qtd)),
+          el('td', {}, brl(p.bruto)),
+          el('td', {},
+            el('input', {
+              type: 'number', min: '0', max: '100', step: '1', value: String(p.pct),
+              style: 'width:72px', class: 'input-pct',
+              onchange: async (ev) => {
+                try {
+                  await patch(`/api/gestor/comissoes/${p.id}`, { comissao_pct: Number(ev.currentTarget.value) });
+                  sucesso('Comissão atualizada.');
+                  preencherComissoes();
+                } catch (e) { sucesso(e.message); }
+              },
+            })),
+          el('td', { style: 'font-weight:750' }, brl(p.comissao))
+        )))
+      ))
+  );
+}
+
+
 function renderFinanceiro(alvo, r, de, ate, controles) {
   const prim = GRAFICO.principal;
   const prim2 = GRAFICO.secundaria;
@@ -1709,6 +1905,7 @@ function renderFinanceiro(alvo, r, de, ate, controles) {
   alvo.append(
     filtro || el('div'),
     cartaoAssinatura(),
+    cartaoComissoes(),
     cartaoPrevisao,
     el('div', { class: 'grade-3', style: 'margin-bottom:14px' },
       kpi(brl(r.hoje.bruto), 'Faturamento hoje'),

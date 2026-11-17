@@ -1,5 +1,6 @@
 import express from 'express';
 import { db } from '../db.js';
+import { limiteClientes } from '../lib/planos.js';
 import { hashSenha, verificaSenha, criaToken, encerraToken, leCookie } from '../auth.js';
 import { hojeISO } from '../lib/agenda.js';
 
@@ -72,6 +73,20 @@ router.post('/cliente/cadastro', async (req, res) => {
     .prepare(`SELECT id FROM usuarios WHERE empresa_id = ? AND (telefone = ? OR cpf = ?)`)
     .get(emp.id, tel, cpfN);
   if (existe) return res.status(409).json({ erro: 'Já existe um cadastro com este telefone ou CPF. Faça login.' });
+
+  // Limite de clientes por plano (Liberdade 2.000, Profissional 5.000, Redes ilimitado).
+  const limite = limiteClientes(emp.plano);
+  if (limite !== null) {
+    const q = await db
+      .prepare(`SELECT COUNT(*) AS n FROM usuarios WHERE empresa_id = ? AND papel = 'cliente'`)
+      .get(emp.id);
+    if (Number(q.n) >= limite) {
+      return res.status(403).json({
+        erro: 'A base de clientes deste estabelecimento atingiu o limite do plano. Fale com o responsável.',
+        limite,
+      });
+    }
+  }
 
   // aniversário é opcional; quando vem, guardamos a data completa
   let nasc = null;

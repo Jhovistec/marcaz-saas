@@ -1,0 +1,113 @@
+/* Páginas de assinatura (vitrine e cadastro por plano) */
+.assinar {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.assinar-topo {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.assinar-marca {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-weight: 850; font-size: 1.15rem; color: var(--txt); text-decoration: none;
+}
+.assinar-marca img { border-radius: 10px; display: block; }
+
+.assinar-hero { text-align: center; display: flex; flex-direction: column; gap: 8px; padding: 8px 0 4px; }
+.assinar-hero h1 { margin: 0; font-size: clamp(1.45rem, 4vw, 2.1rem); line-height: 1.15; }
+.assinar-hero.pequeno h1 { font-size: clamp(1.3rem, 3.4vw, 1.75rem); }
+.assinar-hero p { margin: 0 auto; max-width: 620px; }
+
+/* ---- vitrine ---- */
+.planos-grade {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+}
+.plano-card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--card); border: 1px solid var(--borda);
+  border-radius: 16px; padding: 18px 16px;
+}
+.plano-card.destaque { border-color: var(--prim); box-shadow: 0 0 0 1px var(--prim) inset; }
+.plano-selo {
+  position: absolute; top: -11px; left: 16px;
+  background: var(--prim); color: var(--prim-txt, #111);
+  font-size: 0.68rem; font-weight: 850; letter-spacing: .04em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 999px;
+}
+.plano-nome { font-size: 1.1rem; font-weight: 850; }
+.plano-resumo { font-size: 0.84rem; color: var(--txt-2); min-height: 34px; }
+.plano-preco { display: flex; align-items: baseline; gap: 3px; }
+.plano-moeda { font-size: 0.85rem; font-weight: 750; color: var(--txt-2); margin-right: 2px; }
+.plano-valor { font-size: 1.85rem; font-weight: 900; letter-spacing: -0.02em; }
+.plano-mes { font-size: 0.8rem; color: var(--txt-2); }
+.plano-lista { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.plano-lista li {
+  position: relative; padding-left: 20px; font-size: 0.83rem; line-height: 1.35; color: var(--txt-2);
+}
+.plano-lista li::before {
+  content: '✓'; position: absolute; left: 0; top: 0;
+  color: var(--ok); font-weight: 900;
+}
+.plano-acoes { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 12px; }
+.plano-acoes .btn { width: 100%; }
+
+/* ---- cadastro ---- */
+.assinar-grade {
+  display: grid; gap: 16px; align-items: start;
+  grid-template-columns: minmax(0, 1.55fr) minmax(240px, 1fr);
+}
+.assinar-form {
+  background: var(--card); border: 1px solid var(--borda);
+  border-radius: 16px; padding: 18px 16px;
+  display: flex; flex-direction: column;
+}
+.assinar-form .linha-campos { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.assinar-form .btn { margin-top: 6px; }
+
+.assinar-resumo {
+  position: sticky; top: 16px;
+  background: var(--card); border: 1px solid var(--prim);
+  border-radius: 16px; padding: 16px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.resumo-plano { font-weight: 850; }
+.resumo-preco { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.02em; }
+.resumo-troca { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--borda); }
+
+/* ---- sucesso ---- */
+.assinar-ok {
+  max-width: 520px; margin: 12px auto 0; width: 100%;
+  display: flex; flex-direction: column; gap: 14px; align-items: center; text-align: center;
+}
+.ok-icone {
+  width: 62px; height: 62px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--ok) 22%, transparent);
+  color: var(--ok); font-size: 1.9rem; font-weight: 900;
+}
+.assinar-ok h1 { margin: 0; font-size: 1.5rem; }
+.ok-caixa {
+  width: 100%; background: var(--card); border: 1px solid var(--borda);
+  border-radius: 14px; padding: 13px 14px;
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.ok-link { font-weight: 800; color: var(--prim); word-break: break-all; text-decoration: none; }
+.ok-login { font-weight: 850; font-size: 1.1rem; letter-spacing: .02em; }
+.ok-acoes { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
+.ok-acoes .btn { flex: 1 1 180px; }
+
+.centro { text-align: center; }
+.assinar-rodape { text-align: center; padding-top: 8px; }
+
+@media (max-width: 720px) {
+  .assinar-grade { grid-template-columns: 1fr; }
+  .assinar-resumo { position: static; order: -1; }
+  .assinar-form .linha-campos { grid-template-columns: 1fr; }
+  .plano-resumo { min-height: 0; }
+}

@@ -29,6 +29,7 @@ const estado = {
   carregandoSlots: false,
   especial: null,       // data especial da data escolhida (exige antecipação)
   comprovante: null,    // foto do comprovante enviada pelo cliente
+  fiel: null,          // programa Cliente Fiel (meta, progresso)
   tela: 'login',
 };
 
@@ -262,6 +263,7 @@ async function carregarMeusAgendamentos() {
     estado.agendamentos = r.agendamentos;
     estado.ultimaVisita = r.ultima_visita;
     estado.atrasoMin = r.atraso_min || 0;
+    estado.fiel = r.fiel || null;
   } catch {
     estado.agendamentos = [];
   }
@@ -809,6 +811,28 @@ function reduzirImagem(arquivo, lado, qualidade) {
 
 
 /* ============================ tela final ============================ */
+/** Cliente Fiel: aparece só quando o gestor habilitou o programa. */
+function cartaoFiel() {
+  const f = estado.fiel;
+  if (!f || !f.ativo) return null;
+  const feitos = Number(f.feitos) || 0;
+  const meta = Number(f.meta) || 10;
+  const faltam = Math.max(0, Number(f.faltam) || 0);
+  const pct = Math.min(100, Math.round((feitos / meta) * 100));
+  const premio = f.premio === 'gratis' ? 'um serviço grátis' : `${f.valor_pct}% de desconto`;
+  return el('div', { class: 'caixa-fiel' },
+    el('div', { class: 'fiel-topo' },
+      el('div', { class: 'fiel-titulo' }, '⭐ Cliente Fiel'),
+      el('div', { class: 'mini muted' }, `${feitos} de ${meta}`)),
+    el('div', { class: 'fiel-barra' }, el('div', { class: 'fiel-trilho' }, el('div', { class: 'fiel-cheio', style: `width:${pct}%` }))),
+    el('div', { class: 'mini' },
+      faltam > 0
+        ? `Faltam ${faltam} serviço${faltam === 1 ? '' : 's'} para você ganhar ${premio}.`
+        : `Você já ganhou ${premio}! Fale com o estabelecimento para usar.`)
+  );
+}
+
+
 function telaFinal() {
   barraAtual?.remove();
   barraAtual = null;
@@ -844,6 +868,7 @@ function telaFinal() {
         e.aberto_hora ? el('br') : null,
         e.aberto_hora ? `${e.aberto_hora} às ${e.fecha_hora}` : ''
       ),
+      cartaoFiel(),
       redes.length ? el('div', { class: 'redes', style: 'margin-bottom:22px' }, redes) : null,
       el('button', {
         class: 'btn btn-bloco', type: 'button',
