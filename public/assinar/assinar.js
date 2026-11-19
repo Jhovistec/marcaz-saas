@@ -4,6 +4,17 @@ import { post, get, el, brl, $, aviso, limpaAviso, mascaraTelefone, mascaraCPF, 
 const app = $('#app');
 const S = { planos: [], ciclos: [], plano: null, ciclo: 'mensal', enviando: false };
 
+// "Trocar de plano": Liberdade cai no pagamento; Profissional leva ao WhatsApp
+// para conversar sobre o Redes; Redes volta para a vitrine.
+const TROCA = {
+  liberdade: { href: 'https://mpago.la/1xBAnrH', externo: true },
+  profissional: {
+    href: 'https://api.whatsapp.com/send?phone=5534991157546&text=Ol%C3%A1%2C+gostaria+de+conversar+sobre+o+plano+redes+do+Marcaz.',
+    externo: true,
+  },
+  redes: { href: '/assinar', externo: false },
+};
+
 const partes = location.pathname.split('/').filter(Boolean); // ['assinar', plano, ciclo]
 const planoUrl = partes[1] || null;
 const cicloUrl = partes[2] || 'mensal';
@@ -103,9 +114,11 @@ function cadastro() {
     p.sob_consulta ? null : el('div', { class: 'mini muted' },
       S.ciclo === 'anual' ? '12 meses de acesso, cobrados uma vez' : 'cobrado todo mês, sem fidelidade'),
     el('div', { class: 'resumo-troca' },
-      el('a', { class: 'mini', href: `/assinar/${p.id}/${S.ciclo === 'anual' ? 'mensal' : 'anual'}` },
-        `Mudar para ${S.ciclo === 'anual' ? 'mensal' : 'anual'}`),
-      el('a', { class: 'mini', href: '/assinar' }, 'Trocar de plano')
+      el('a', {
+        class: 'mini', href: TROCA[p.id].href,
+        target: TROCA[p.id].externo ? '_blank' : null,
+        rel: TROCA[p.id].externo ? 'noopener' : null,
+      }, 'Trocar de plano')
     )
   );
 
