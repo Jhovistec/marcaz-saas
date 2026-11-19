@@ -4,16 +4,19 @@ import { post, get, el, brl, $, aviso, limpaAviso, mascaraTelefone, mascaraCPF, 
 const app = $('#app');
 const S = { planos: [], ciclos: [], plano: null, ciclo: 'mensal', enviando: false };
 
-// "Trocar de plano": Liberdade cai no pagamento; Profissional leva ao WhatsApp
-// para conversar sobre o Redes; Redes volta para a vitrine.
+// "Trocar de plano": o destino depende do plano E do ciclo.
+// Liberdade mensal e anual têm links de pagamento próprios; Profissional leva
+// ao WhatsApp para conversar sobre o Redes; Redes volta para a vitrine.
+const WHATS_REDES = 'https://api.whatsapp.com/send?phone=5534991157546&text=Ol%C3%A1%2C+gostaria+de+conversar+sobre+o+plano+redes+do+Marcaz.';
 const TROCA = {
-  liberdade: { href: 'https://mpago.la/1xBAnrH', externo: true },
-  profissional: {
-    href: 'https://api.whatsapp.com/send?phone=5534991157546&text=Ol%C3%A1%2C+gostaria+de+conversar+sobre+o+plano+redes+do+Marcaz.',
-    externo: true,
-  },
-  redes: { href: '/assinar', externo: false },
+  'liberdade:mensal': { href: 'https://mpago.la/1xBAnrH', externo: true },
+  'liberdade:anual': { href: 'https://mpago.la/33bGcVD', externo: true },
+  'profissional:mensal': { href: WHATS_REDES, externo: true },
+  'profissional:anual': { href: WHATS_REDES, externo: true },
+  'redes:mensal': { href: '/assinar', externo: false },
+  'redes:anual': { href: '/assinar', externo: false },
 };
+const trocaDe = (plano, ciclo) => TROCA[`${plano}:${ciclo}`] || TROCA[`${plano}:mensal`];
 
 const partes = location.pathname.split('/').filter(Boolean); // ['assinar', plano, ciclo]
 const planoUrl = partes[1] || null;
@@ -115,9 +118,9 @@ function cadastro() {
       S.ciclo === 'anual' ? '12 meses de acesso, cobrados uma vez' : 'cobrado todo mês, sem fidelidade'),
     el('div', { class: 'resumo-troca' },
       el('a', {
-        class: 'mini', href: TROCA[p.id].href,
-        target: TROCA[p.id].externo ? '_blank' : null,
-        rel: TROCA[p.id].externo ? 'noopener' : null,
+        class: 'mini', href: trocaDe(p.id, S.ciclo).href,
+        target: trocaDe(p.id, S.ciclo).externo ? '_blank' : null,
+        rel: trocaDe(p.id, S.ciclo).externo ? 'noopener' : null,
       }, 'Trocar de plano')
     )
   );
